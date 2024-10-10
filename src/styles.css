@@ -1,0 +1,9 @@
+html, body, #root {
+    width: 100%;      /* ウィンドウ全体に*/
+    height: 100%;
+    margin: 0;        /* すきまなく */
+    padding: 0;
+    overflow: hidden; /* はみ出た部分は表示されない */
+    background-color: rgb(200,200,200);
+}
+
