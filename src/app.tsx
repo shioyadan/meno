@@ -49,8 +49,12 @@ const App = () => {
             <div style={{ flexGrow: 1 }}>
                 <TreeMapCanvas store={store} />
             </div>
-            <div style={{ height: "40px", backgroundColor: "#eee", padding: "10px", textAlign: "left", borderTop: "1px solid #ccc" }}>
-                <span>{statusBarMessage}</span>
+
+            {/* <div style={{ height: "40px", backgroundColor: "#eee", padding: "10px", textAlign: "left", borderTop: "1px solid #ccc" }}>
+                <span>{statusBarMessage}</span> */}
+
+            <div style={{ height: "20px", backgroundColor: "#272a31", padding: "5px", textAlign: "left", borderTop: "1px solid #383B41" }}>
+                <span style={{ color: "#C9CACB" }}>{statusBarMessage}</span>
             </div>
         </div>
     );
