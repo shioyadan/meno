@@ -108,8 +108,8 @@ const TreeMapCanvas = (props: {store: Store;}) => {
         const observer = new ResizeObserver((entries) => {
             handleResize();
         });
-        if (canvasRef.current) {
-            observer.observe(canvasRef.current);
+        if (divRef.current) {
+            observer.observe(divRef.current);
         }
 
         // Canvas の初期化
@@ -119,8 +119,8 @@ const TreeMapCanvas = (props: {store: Store;}) => {
 
         // コンポーネントのアンマウント時にリスナーを削除
         return () => {
-            if (canvasRef.current) {
-                observer.unobserve(canvasRef.current);
+            if (divRef.current) {
+                observer.unobserve(divRef.current);
             }
             if (ctx.zoomAnimationID) {
                 clearInterval(ctx.zoomAnimationID); 
@@ -229,9 +229,14 @@ const TreeMapCanvas = (props: {store: Store;}) => {
         );
     };
 
+    // 外側の要素に 100% で入るようにする
+    // canvas をインライン要素ではなく block にしておかないと div との間に隙間ができる
+    // canvas の高解像度対応時にサイズを決定するために div で囲む
     return (
         <div ref={divRef} style={{ width: "100%", height: "100%" }} >
-            <canvas ref={canvasRef} style={{ width: "100%", height: "100%" }} />
+            <canvas ref={canvasRef} style={{ 
+                width: "100%", height: "100%", display: "block", margin: 0, padding: 0 
+            }} />
         </div>
         
     );
