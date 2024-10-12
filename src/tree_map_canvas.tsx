@@ -113,7 +113,9 @@ const TreeMapCanvas = (props: {store: Store;}) => {
         store.on(CHANGE.TREE_LOADED, () => {
             draw();
         });
-    
+        store.on(CHANGE.CANVAS_POINTER_CHANGED, () => {
+            draw();
+        });    
         // リサイズ時のリスナー
         const observer = new ResizeObserver((entries) => {
             handleResize();
@@ -231,6 +233,7 @@ const TreeMapCanvas = (props: {store: Store;}) => {
         props.store.treeMapRenderer.render(
             canvas,
             props.store.tree,
+            props.store.pointedFileNode,
             virtualWidth,
             virtualHeight,
             [ctx.viewPoint[0], ctx.viewPoint[1], ctx.viewPoint[0] + width, ctx.viewPoint[1] + height],

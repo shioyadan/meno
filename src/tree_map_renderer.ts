@@ -48,8 +48,8 @@ class TreeMapRenderer {
     // canvas に対し，tree のファイルツリーを
     // virtualWidth/virtualHeight に対応した大きさの tree map を生成し，
     // そこの上の viewPort を描画する．
-    render(canvas: any, tree: FileNode|null, virtualWidth: number, 
-        virtualHeight: number, viewPort: number[], isSizeMode: boolean
+    render(canvas: any, tree: FileNode|null, pointedFileNode: FileNode|null,
+        virtualWidth: number, virtualHeight: number, viewPort: number[], isSizeMode: boolean
     ) {
         let self = this;
         // let theme = this.THEME["light"];
@@ -117,6 +117,20 @@ class TreeMapRenderer {
             }
             c.strokeRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
         }
+
+        // ポインタが指しているファイルをハイライト
+        // ループが異なるのは描画を上書きされないようにするため
+        c.lineWidth = 6; 
+        for (let a of areas) {
+            if (a.fileNode == pointedFileNode) {
+                // c.strokeStyle = "rgb(230,230,250)";
+                c.strokeStyle = strokeStyle[a.level];
+                let rect = a.rect;
+                c.strokeRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
+                break;
+            }
+        }
+
 
         function fileNodeToStr(fileNode: FileNode) {
             let str = "";
