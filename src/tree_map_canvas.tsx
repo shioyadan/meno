@@ -260,12 +260,36 @@ const TreeMapCanvas = (props: {store: Store;}) => {
         ];
         draw();
     };
+    const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault(); // デフォルト動作を防止（ブラウザがファイルを開かないようにする）
+    };
+
+    const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        // setError(null); // エラーのクリア
+
+        const file = event.dataTransfer.files[0]; // ドロップされた最初のファイルを取得
+        if (!file) {
+            // setError("No file dropped");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            store.trigger(ACTION.FILE_IMPORT, reader.result as string);   
+        };
+        reader.onerror = () => {
+            // setError("Failed to read the file");
+        };
+        reader.readAsText(file); // ファイルをテキストとして読み込み
+    };
 
     // 外側の要素に 100% で入るようにする
     // canvas をインライン要素ではなく block にしておかないと div との間に隙間ができる
     // canvas の高解像度対応時にサイズを決定するために div で囲む
     return (
-        <div ref={divRef} style={{ width: "100%", height: "100%" }} >
+        <div ref={divRef} style={{ width: "100%", height: "100%" }} 
+            onDrop={handleDrop} onDragOver={handleDragOver}>
             <canvas ref={canvasRef} style={{ 
                 width: "100%", height: "100%", display: "block", margin: 0, padding: 0 
             }} />
