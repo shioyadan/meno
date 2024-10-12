@@ -14,8 +14,8 @@ const ToolBar = (props: {store: Store;}) => {
         const [fileHandle] = await (window as any).showOpenFilePicker();
         const file = await fileHandle.getFile();
         const contents = await file.text();
-        
-        console.log(contents); // ファイル内容を表示
+        store.trigger(ACTION.FILE_IMPORT, contents);   
+        // console.log(contents); // ファイル内容を表示
     }
 
     const Dispatch = (selectedKey: string|null, event: React.SyntheticEvent<unknown>) => {

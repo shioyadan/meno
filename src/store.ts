@@ -47,20 +47,23 @@ class Store {
         this.treeMapRenderer = new TreeMapRenderer();
         this.fileInfo_ = new FileInfo();
 
-        let fileReader = new FileReader();
 
-        this.fileInfo_.import(
-            fileReader, 
-            (context, tree) => { // finish handler
-                this.tree = tree;
-                this.trigger(CHANGE.TREE_LOADED);
-            },
-            (context, filePath)  => {
-                // 読み込み状態の更新
-                // this.trigger(CHANGE.TREE_LOADING, this, context, filePath);       
-            }
-        );
-        fileReader.load();
+        this.on(ACTION.FILE_IMPORT, (content: string) => {
+            let fileReader = new FileReader(content);
+
+            this.fileInfo_.import(
+                fileReader, 
+                (context, tree) => { // finish handler
+                    this.tree = tree;
+                    this.trigger(CHANGE.TREE_LOADED);
+                },
+                (context, filePath)  => {
+                    // 読み込み状態の更新
+                    // this.trigger(CHANGE.TREE_LOADING, this, context, filePath);       
+                }
+            );
+            fileReader.load();
+        });
 
         this.on(ACTION.CANVAS_POINTER_CHANGE, (path, fileNode) => {
             this.pointedPath = path;
