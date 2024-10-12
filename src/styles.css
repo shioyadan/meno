@@ -7,10 +7,22 @@ html, body, #root {
     background-color: rgb(200,200,200);
 }
 
+/* 通常時の色 */
 .nav-link.tool-bar-link {
-    color: #909192; /* 通常時の色 */
-  }
-  
-  .nav-link.tool-bar-link:hover {
-    color: #C9CACB; /* ホバー時の色 */
-  }
+    color: #909192;
+    transition: color 0.2s ease; /* 色の変化をスムーズにする */
+}
+
+/* ホバー時の色 */
+.nav-link.tool-bar-link:hover {
+    color: #C9CACB;
+}
+
+/* 選択（active）時の色をホバーと同じにする */
+.nav-link.tool-bar-link.active {
+    color: #909192;
+}
+
+.nav-link.tool-bar-link i {
+    margin-right: 2px; /* アイコンと文字の間の余白 */
+}

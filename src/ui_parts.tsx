@@ -18,21 +18,25 @@ const ToolBar = (props: {store: Store;}) => {
         console.log(contents); // ファイル内容を表示
     }
 
-    const Dispatch = (selectedKey: string|null) => {
+    const Dispatch = (selectedKey: string|null, event: React.SyntheticEvent<unknown>) => {
+        event.preventDefault();    // ページ遷移を防ぐ
         switch (selectedKey) {
             case "zoom-in": store.trigger(ACTION.CANVAS_ZOOM_IN); break;
             case "zoom-out": store.trigger(ACTION.CANVAS_ZOOM_OUT); break;
             case "version":  store.trigger(ACTION.DIALOG_VERSION_OPEN); break;
+            case "fit":  store.trigger(ACTION.FIT_TO_CANVAS); break;
             case "import":
                 openFile();
                 break;
         }
+        setSelectedKey(0);
     };
+    const [selectedKey, setSelectedKey] = useState(0);
     return (
         <Navbar variant="dark" expand={true} style={{ backgroundColor: "#272a31" }}>
             <Navbar.Toggle aria-controls="responsive-navbar-nav" />
             <Navbar.Collapse id="responsive-navbar-nav">
-            <Nav onSelect={Dispatch}>
+            <Nav onSelect={Dispatch} activeKey={selectedKey}>
                 <NavDropdown menuVariant="dark" title={<i className="bi bi-list"></i>} id="collapsible-nav-dropdown">
                     <NavDropdown.Item eventKey="import">
                         Import file
@@ -42,14 +46,17 @@ const ToolBar = (props: {store: Store;}) => {
                     </NavDropdown.Item>
                 </NavDropdown>
             </Nav>
-            <Nav onSelect={Dispatch}
+            <Nav onSelect={Dispatch} activeKey={selectedKey}
                 style={{ color: "#C9CACB" }} className="me-auto" // このクラスでリンクが左側に配置される
             >
                 <Nav.Link className="nav-link tool-bar-link" eventKey="zoom-in">
                     <i className="bi bi-zoom-in"></i> Zoom In                
                 </Nav.Link>
-                <Nav.Link className="nav-link tool-bar-link" eventKey="zoom-out">                    
+                <Nav.Link className="nav-link tool-bar-link" eventKey="zoom-out">
                     <i className="bi bi-zoom-out"></i> Zoom Out                
+                </Nav.Link>
+                <Nav.Link className="nav-link tool-bar-link" eventKey="fit">
+                    <i className="bi bi-arrows-fullscreen"></i> Fit to Canvas
                 </Nav.Link>
             </Nav>
             </Navbar.Collapse>

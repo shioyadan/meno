@@ -36,12 +36,12 @@ const TreeMapCanvas = (props: {store: Store;}) => {
         const handleMouseDoubleClick = (e: MouseEvent) => {
             if (!store.tree) return;
             const zoomIn = !e.shiftKey;
-            startZoom(zoomIn, e.clientX, e.clientY);
+            startZoomInOrOut(zoomIn, e.clientX, e.clientY);
         };
 
         const handleMouseWheel = (e: WheelEvent) => {
             if (!store.tree) return;
-            startZoom(e.deltaY < 0, e.offsetX, e.offsetY);
+            startZoomInOrOut(e.deltaY < 0, e.offsetX, e.offsetY);
         };
 
         const handleMouseMove = (e: MouseEvent) => {
@@ -98,17 +98,17 @@ const TreeMapCanvas = (props: {store: Store;}) => {
                 ctx.viewPoint = [ctx.viewPoint[0] + 50, ctx.viewPoint[1]];
                 draw();
             } else if (key === "+") {
-                startZoom(true, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
+                startZoomInOrOut(true, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
             } else if (key === "-") {
-                startZoom(false, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
+                startZoomInOrOut(false, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
             }
         };
 
         store.on(CHANGE.CANVAS_ZOOM_IN, () => {
-            startZoom(true, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
+            startZoomInOrOut(true, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
         });
         store.on(CHANGE.CANVAS_ZOOM_OUT, () => {
-            startZoom(false, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
+            startZoomInOrOut(false, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
         });
         store.on(CHANGE.TREE_LOADED, () => {
             draw();
@@ -116,6 +116,10 @@ const TreeMapCanvas = (props: {store: Store;}) => {
         store.on(CHANGE.CANVAS_POINTER_CHANGED, () => {
             draw();
         });    
+        store.on(CHANGE.FIT_TO_CANVAS, function(){
+            fitToCanvas();
+        });
+
         // リサイズ時のリスナー
         const observer = new ResizeObserver((entries) => {
             handleResize();
@@ -181,7 +185,7 @@ const TreeMapCanvas = (props: {store: Store;}) => {
 
     const calcZoomRatio = (level: number) => Math.pow(2, level);
 
-    const startZoom = (direction: boolean, offsetX: number, offsetY: number) => {
+    const startZoomInOrOut = (direction: boolean, offsetX: number, offsetY: number) => {
         const ctx = context.current;
         if (!ctx.inZoomAnimation) {
             ctx.zoomAnimationDirection = direction;
@@ -239,6 +243,22 @@ const TreeMapCanvas = (props: {store: Store;}) => {
             [ctx.viewPoint[0], ctx.viewPoint[1], ctx.viewPoint[0] + width, ctx.viewPoint[1] + height],
             ctx.isSizeMode
         );
+    };
+    
+    const fitToCanvas = () => {
+        const ctx = context.current;
+        const canvas: any = canvasRef.current;  // DOM
+        let targetScale = Math.min(
+            canvas.offsetWidth / ctx.BASE_SIZE[0],
+            canvas.offsetHeight / ctx.BASE_SIZE[1]
+        );
+
+        ctx.zoomLevel = Math.log2(targetScale);
+        ctx.viewPoint = [
+            -(canvas.offsetWidth - (ctx.BASE_SIZE[0]*targetScale)) / 2,
+            -(canvas.offsetHeight - (ctx.BASE_SIZE[1]*targetScale)) / 2
+        ];
+        draw();
     };
 
     // 外側の要素に 100% で入るようにする

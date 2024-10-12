@@ -12,6 +12,7 @@ enum ACTION {
     CANVAS_ZOOM_OUT,
     MODE_CHANGE,
     DIALOG_VERSION_OPEN,
+    FIT_TO_CANVAS,
     ACTION_END, // 末尾
 };
 
@@ -26,6 +27,7 @@ enum CHANGE {
     CANVAS_ZOOM_OUT,
     CANVAS_POINTER_CHANGED,
     DIALOG_VERSION_OPEN,
+    FIT_TO_CANVAS,
 };
 
 class Store {
@@ -69,6 +71,7 @@ class Store {
         this.on(ACTION.CANVAS_ZOOM_IN, () => { this.trigger(CHANGE.CANVAS_ZOOM_IN); });
         this.on(ACTION.CANVAS_ZOOM_OUT, () => { this.trigger(CHANGE.CANVAS_ZOOM_OUT); });
         this.on(ACTION.DIALOG_VERSION_OPEN, () => { this.trigger(CHANGE.DIALOG_VERSION_OPEN); });
+        this.on(ACTION.FIT_TO_CANVAS, () => {this.trigger(CHANGE.FIT_TO_CANVAS);}); 
     }
 
     on(event: CHANGE|ACTION, handler: (...args: any[]) => void): void {
