@@ -5,7 +5,8 @@
         "jsx": "react",
         "esModuleInterop": true,
         "strict": true,
-        "skipLibCheck": true
+        "skipLibCheck": true,
+        "moduleResolution": "node"  // react-bootstrap で必要
     },
     "exclude": [
       "node_modules"

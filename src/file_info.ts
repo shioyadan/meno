@@ -481,4 +481,30 @@ class FileInfo {
     }
 };
 
-export { FileReader, FileInfo, FileNode, FileContext };
+function fileNodeToStr(fileNode: FileNode, isSizeMode: boolean) {
+    let str = "";
+    let num = isSizeMode ? fileNode.size : fileNode.fileCount;
+    if (num > 1024*1024*1024) {
+        str = "" + Math.ceil(num/1024/1024/1024) + "G";
+    }
+    else if (num > 1024*1024) {
+        str = "" + Math.ceil(num/1024/1024) + "M";
+    }
+    else if (num > 1024) {
+        str = "" + Math.ceil(num/1024) + "K";
+    }
+    else {
+        str = "" + num;
+    }
+    str += isSizeMode ? "B" : " files";
+
+    if (isSizeMode && num == 1) {
+        return "";
+    }
+    else {
+        return " [" + str + "]";
+    }
+}
+
+
+export { FileReader, FileInfo, FileNode, FileContext, fileNodeToStr };

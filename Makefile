@@ -2,6 +2,10 @@ all:
 	mkdir -p dist
 	npx webpack
 
+production:
+	mkdir -p dist
+	npx webpack --mode production
+
 serve:
 	npx webpack serve --open
 

@@ -9,13 +9,13 @@ class TreeMapRenderer {
     THEME = {
         "dark": {
             backgroundColor: "#1C1E23",
-            innerColor: (i: number) => ("hsl(" + ((0+i*28)%360) + ", 40%, 40%)"),
+            innerColor: (i: number) => ("hsl(" + ((0+i*28)%360) + ", 30%, 40%)"),
             strokeColor: (i: number) => ("hsl(" + ((0+i*28)%360) + ", 45%, 55%)"),
-            textBodyColor: "rgb(255,255,255)",
+            textBodyColor: "rgb(245,245,245)",
             outlineText: false
         },
         "light": {
-            backgroundColor: "rgb(200,200,200)",
+            backgroundColor: "#F0F0F0",
             innerColor: (i: number) => ("hsl(" + ((0+i*28)%360) + ", 50%, 80%)"),
             strokeColor: (i: number) => ("hsl(" + ((0+i*28)%360) + ", 20%, 40%)"),
             textBodyColor: "rgb(255,255,255)",
@@ -100,18 +100,19 @@ class TreeMapRenderer {
         }
 
         prevLevel = -1;
+        c.lineWidth = 2; 
         for (let a of areas) {
             let rect = a.rect;
             if (prevLevel != a.level) {
-                // 枠線の太さもレベルに応じる
+                // 枠線の太さもレベルに応じる?
                 //c.lineWidth = Math.max(2 - a.level/2, 0.5); 
-                c.lineWidth = 1; 
+                // c.lineWidth = 1; 
                 // 枠線の色は，基準色から明度をおとしたものに
-                c.strokeStyle = strokeStyle[a.level];
+                c.strokeStyle = strokeStyle[a.level % 20];
                 prevLevel = a.level;
             }
             if (!a.fileNode.children) {
-                c.lineWidth = 2; 
+                // c.lineWidth = 2; 
                 prevLevel = -1;
             }
             c.strokeRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);

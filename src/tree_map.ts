@@ -45,13 +45,9 @@ class TreeMap {
 
     // ファイルノードからパスを得る
     getPathFromFileNode(fileNode: FileNode){
-        // if (!fileNode) {
-        //     return null;
-        // }
-
         // file tree からパスを生成
-        let path = fileNode.key;
-        let f = fileNode.parent;
+        let path = fileNode?.key;
+        let f = fileNode?.parent;
         while (f) {
             path = f.key + "/" + path;
             f = f.parent;

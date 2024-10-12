@@ -7,3 +7,10 @@ html, body, #root {
     background-color: rgb(200,200,200);
 }
 
+.nav-link.tool-bar-link {
+    color: #909192; /* 通常時の色 */
+  }
+  
+  .nav-link.tool-bar-link:hover {
+    color: #C9CACB; /* ホバー時の色 */
+  }

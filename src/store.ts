@@ -11,10 +11,12 @@ enum ACTION {
     CANVAS_ZOOM_IN,
     CANVAS_ZOOM_OUT,
     MODE_CHANGE,
+    DIALOG_VERSION_OPEN,
+    ACTION_END, // 末尾
 };
 
 enum CHANGE {
-    TREE_LOADED,
+    TREE_LOADED = ACTION.ACTION_END+1,
     TREE_LOADING,
     TREE_RELEASED,
     TREE_MODE_CHANGED,
@@ -23,6 +25,7 @@ enum CHANGE {
     CANVAS_ZOOM_IN,
     CANVAS_ZOOM_OUT,
     CANVAS_POINTER_CHANGED,
+    DIALOG_VERSION_OPEN,
 };
 
 class Store {
@@ -48,7 +51,7 @@ class Store {
             fileReader, 
             (context, tree) => { // finish handler
                 this.tree = tree;
-                // this.trigger(CHANGE.TREE_LOADED, this, context, fileName);       
+                this.trigger(CHANGE.TREE_LOADED);
             },
             (context, filePath)  => {
                 // 読み込み状態の更新
@@ -62,21 +65,26 @@ class Store {
             this.pointedFileNode = fileNode;
             this.trigger(CHANGE.CANVAS_POINTER_CHANGED, this);       
         });
+
+        this.on(ACTION.CANVAS_ZOOM_IN, () => { this.trigger(CHANGE.CANVAS_ZOOM_IN); });
+        this.on(ACTION.CANVAS_ZOOM_OUT, () => { this.trigger(CHANGE.CANVAS_ZOOM_OUT); });
+        this.on(ACTION.DIALOG_VERSION_OPEN, () => { this.trigger(CHANGE.DIALOG_VERSION_OPEN); });
     }
 
     on(event: CHANGE|ACTION, handler: (...args: any[]) => void): void {
         if (!(event in CHANGE || event in ACTION)) {
-            console.log(`Unknown event ${event}`);            
+            console.log(`Unknown event ${event}`);
         }
         if (!(event in this.handlers_ )) {
             this.handlers_[event] = [];
         }
         this.handlers_[event].push(handler);
+        // console.log(`on() is called {event: ${event}, handler: ${handler}}`);
     }
 
     trigger(event: CHANGE|ACTION, ...args: any[]) {
         if (!(event in CHANGE || event in ACTION)) {
-            console.log(`Unknown event ${event}`);            
+            console.log(`Unknown event ${event}`);
         }
         if (event in this.handlers_) {
             let handlers = this.handlers_[event];

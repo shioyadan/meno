@@ -103,6 +103,16 @@ const TreeMapCanvas = (props: {store: Store;}) => {
                 startZoom(false, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
             }
         };
+
+        store.on(CHANGE.CANVAS_ZOOM_IN, () => {
+            startZoom(true, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
+        });
+        store.on(CHANGE.CANVAS_ZOOM_OUT, () => {
+            startZoom(false, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
+        });
+        store.on(CHANGE.TREE_LOADED, () => {
+            draw();
+        });
     
         // リサイズ時のリスナー
         const observer = new ResizeObserver((entries) => {
@@ -115,7 +125,6 @@ const TreeMapCanvas = (props: {store: Store;}) => {
         // Canvas の初期化
         ctx.BASE_SIZE = [canvas.offsetWidth * 0.7, (canvas.offsetWidth * 0.7) / 16 * 9];
         ctx.viewPoint = [-(canvas.offsetWidth - ctx.BASE_SIZE[0]) / 2, -(canvas.offsetHeight - ctx.BASE_SIZE[1]) / 2];
-        draw();
 
         // コンポーネントのアンマウント時にリスナーを削除
         return () => {
