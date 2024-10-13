@@ -36,7 +36,7 @@ const TreeMapCanvas = (props: {store: Store;}) => {
         const handleMouseDoubleClick = (e: MouseEvent) => {
             if (!store.tree) return;
             const zoomIn = !e.shiftKey;
-            startZoomInOrOut(zoomIn, e.clientX, e.clientY);
+            startZoomInOrOut(zoomIn, e.offsetX, e.offsetY);
         };
 
         const handleMouseWheel = (e: WheelEvent) => {
