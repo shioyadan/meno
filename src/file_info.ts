@@ -180,6 +180,7 @@ class FileInfo {
                 finishCallback(context, root);
             }, 0);
         });
+        reader.load();
     }
 };
 

@@ -41,7 +41,7 @@ class Store {
     pointedPath: string = "";
     pointedFileNode: FileNode|null = null;
 
-    isSizeMode = false;
+    isSizeMode = true;
 
     constructor() {
         this.treeMapRenderer = new TreeMapRenderer();
@@ -62,7 +62,6 @@ class Store {
                     // this.trigger(CHANGE.TREE_LOADING, this, context, filePath);       
                 }
             );
-            fileReader.load();
         });
 
         this.on(ACTION.CANVAS_POINTER_CHANGE, (path, fileNode) => {
