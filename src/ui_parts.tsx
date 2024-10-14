@@ -10,6 +10,11 @@ const ToolBar = (props: {store: Store;}) => {
     let store = props.store;
 
     const openFile = async () => {
+        if (typeof (window as any).showOpenFilePicker !== 'function') {
+            console.log("showOpenFilePicker is not supported");
+            return;
+        }
+        
         // ファイルを読み込む
         const [fileHandle] = await (window as any).showOpenFilePicker();
         const file = await fileHandle.getFile();
