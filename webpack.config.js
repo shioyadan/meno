@@ -28,16 +28,21 @@ module.exports = (env, argv) => {
         // JS 内から import したときに .tsx/.css を JS に変換する
         module: {
             rules: [
-            {
-                test: /\.tsx?$/,
-                use: "ts-loader",
-                exclude: /node_modules/,
-            },
-            {
-                test: /\.css$/, // CSSファイルの読み込み
-                use: ["style-loader", "css-loader"]
-            },
-        ],
+                {
+                    test: /\.tsx?$/,
+                    use: "ts-loader",
+                    exclude: /node_modules/,
+                },
+                {
+                    test: /\.css$/, // CSSファイルの読み込み
+                    use: ["style-loader", "css-loader"]
+                },
+                {
+                    // フォントや画像の処理
+                    test: /\.(woff(2)?|ttf|eot|svg)$/,
+                    type: 'asset/inline',
+                }
+            ],
         },
         // HTML 内にスクリプトを埋め込むためのプラグインの設定
         plugins: [
@@ -51,10 +56,10 @@ module.exports = (env, argv) => {
             ...(isProduction ? [new HtmlInlineScriptPlugin({})] : []),
         ],
         // Docker でビルドする場合にはキャッシュは tmp の方がよい
-        cache: {
-            type: "filesystem", 
-            cacheDirectory: "/tmp/webpack"
-        },
+        // cache: {
+        //     type: "filesystem", 
+        //     cacheDirectory: "/tmp/webpack"
+        // },
         performance: { 
             hints: false 
         }, // ビルド時のパフォーマンス警告を無効化
