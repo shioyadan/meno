@@ -18,8 +18,8 @@ module.exports = (env, argv) => {
         output: {
             path: path.resolve(__dirname, "dist"),
             clean: true, // 出力ディレクトリをクリーンアップする
-            filename: "bundle.js"
-            // publicPath: ''
+            filename: "bundle.js",
+            publicPath: ''
         },
         // import 時に解決するファイルの拡張子
         resolve: {
