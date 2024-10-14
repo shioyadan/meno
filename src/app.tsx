@@ -9,6 +9,14 @@ import { Modal } from "react-bootstrap";
 let store = new Store();
 
 const App = () => {
+    useEffect(() => { // マウント時
+        // もし埋め込みのデフォルトデータが存在する場合はそれを読み込む
+        const data = (window as any).MENO_INITIAL_LOADING_DATA;
+        if (data && data != "" && !data.includes("__MENO_INITIAL_LOADING_DATA_PLACE_HOLDER__")) {
+            store.trigger(ACTION.FILE_IMPORT, data);
+        }
+    }, []);
+
     return (
         <div >
             {/* // flexDirection: "column" と flexGrow: 1 を使うことで，Canvas が画面いっぱいに広がるようにしている */}
