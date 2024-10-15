@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import Store, { ACTION, CHANGE } from "./store";
-import { FileNode, fileNodeToStr } from "./file_info";
+import { FileNode } from "./loader";
 
 
 import {Nav, Navbar, NavDropdown, Form, FormControl} from "react-bootstrap";
@@ -76,7 +76,7 @@ const StatusBar = (props: {store: Store;}) => {
     useEffect(() => { // マウント時
         store.on(CHANGE.CANVAS_POINTER_CHANGED, () => {
             if (!store.pointedPath || !store.pointedFileNode) { return;}
-            setStatusBarMessage(store.pointedPath + fileNodeToStr(store.pointedFileNode, store.isSizeMode));
+            setStatusBarMessage(store.pointedPath + store.fileNodeToStr(store.pointedFileNode, store.isSizeMode));
         });
     }, []);
 

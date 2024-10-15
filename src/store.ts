@@ -1,4 +1,4 @@
-import {FileInfo, FileReader, FileNode} from "./file_info";
+import {Loader, FileReader, FileNode} from "./loader";
 import TreeMapRenderer from "./tree_map_renderer";
 
 enum ACTION {
@@ -32,7 +32,7 @@ enum CHANGE {
 
 class Store {
     treeMapRenderer: TreeMapRenderer;
-    fileInfo_: FileInfo;
+    loader_: Loader;
     tree: FileNode|null = null;
 
     handlers_: { [key: number]: Array<(...args: any[]) => void> } = {};
@@ -42,16 +42,18 @@ class Store {
     pointedFileNode: FileNode|null = null;
 
     isSizeMode = true;
+    fileNodeToStr(fileNode: FileNode, isSizeMode: boolean) {
+        return this.loader_ ? this.loader_.fileNodeToStr(fileNode, isSizeMode) : "";
+    }
 
     constructor() {
         this.treeMapRenderer = new TreeMapRenderer();
-        this.fileInfo_ = new FileInfo();
+        this.loader_ = new Loader();
 
+        this.on(ACTION.FILE_IMPORT, (inputStr: string) => {
+            let fileReader = new FileReader(inputStr);
 
-        this.on(ACTION.FILE_IMPORT, (content: string) => {
-            let fileReader = new FileReader(content);
-
-            this.fileInfo_.import(
+            this.loader_.load(
                 fileReader, 
                 (context, tree) => { // finish handler
                     this.tree = tree;
@@ -75,6 +77,8 @@ class Store {
         this.on(ACTION.DIALOG_VERSION_OPEN, () => { this.trigger(CHANGE.DIALOG_VERSION_OPEN); });
         this.on(ACTION.FIT_TO_CANVAS, () => {this.trigger(CHANGE.FIT_TO_CANVAS);}); 
     }
+
+
 
     on(event: CHANGE|ACTION, handler: (...args: any[]) => void): void {
         if (!(event in CHANGE || event in ACTION)) {

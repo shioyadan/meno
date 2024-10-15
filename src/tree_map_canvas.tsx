@@ -241,7 +241,8 @@ const TreeMapCanvas = (props: {store: Store;}) => {
             virtualWidth,
             virtualHeight,
             [ctx.viewPoint[0], ctx.viewPoint[1], ctx.viewPoint[0] + width, ctx.viewPoint[1] + height],
-            ctx.isSizeMode
+            ctx.isSizeMode,
+            (fileNode, isSizeMode) => props.store.fileNodeToStr(fileNode, isSizeMode)
         );
     };
     

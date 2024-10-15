@@ -1,7 +1,7 @@
 //
 // baseAspectX/baseAspectY: 生成するツリーマップ絶対のアスペクト比
 //
-import {FileNode} from "./file_info";
+import {FileNode} from "./loader";
 
 class DivNode {
     fileNode: FileNode|null = null;
