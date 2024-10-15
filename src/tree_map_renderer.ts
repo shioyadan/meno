@@ -11,9 +11,9 @@ class TreeMapRenderer {
     THEME = {
         "dark": {
             backgroundColor: "#1C1E23",
-            innerColor: (i: number) => ("hsl(" + ((0+i*28)%360) + ", 30%, 40%)"),
-            strokeColor: (i: number) => ("hsl(" + ((0+i*28)%360) + ", 45%, 55%)"),
-            textBodyColor: "rgb(245,245,245)",
+            innerColor: (i: number) => ("hsl(" + ((0+i*28)%360) + ", 25%, 40%)"),
+            strokeColor: (i: number) => ("hsl(" + ((0+i*28)%360) + ", 50%, 70%)"),
+            textBodyColor: "rgb(225,225,225)",
             outlineText: false
         },
         "light": {
