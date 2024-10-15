@@ -1,5 +1,4 @@
-import { FileReader, FileNode, FileContext, 
-    FinishCallback, ProgressCallback} from "./driver/driver";
+import { FileReader, FileNode, FinishCallback, ProgressCallback} from "./driver/driver";
 import FileInfoDriver from "./driver/file_info";
 
 class Loader {
@@ -18,4 +17,4 @@ class Loader {
     
 };
 
-export { FileReader, Loader, FileNode, FileContext };
+export { FileReader, Loader, FileNode };

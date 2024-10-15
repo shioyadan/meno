@@ -55,11 +55,11 @@ class Store {
 
             this.loader_.load(
                 fileReader, 
-                (context, tree) => { // finish handler
+                (tree) => { // finish handler
                     this.tree = tree;
                     this.trigger(CHANGE.TREE_LOADED);
                 },
-                (context, filePath)  => {
+                (filePath)  => {
                     // 読み込み状態の更新
                     // this.trigger(CHANGE.TREE_LOADING, this, context, filePath);       
                 }
