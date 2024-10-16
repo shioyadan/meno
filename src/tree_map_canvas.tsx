@@ -150,37 +150,28 @@ const TreeMapCanvas = (props: {store: Store;}) => {
         const canvas: any = canvasRef.current;
         const div: any = divRef.current;
         const ctx = context.current;
+        let width = canvas.clientWidth;
+        let height = canvas.clientHeight;
 
         // High DPI 対策
         // サイズを変更すると canvas の中身が破棄されるので，
         // 本当に変わったときだけ反映する
-        if (ctx.oldSize[0] != div.offsetWidth || ctx.oldSize[1] != div.offsetHeight){
+        if (ctx.oldSize[0] != width || ctx.oldSize[1] != height){
 
             // High DPI 対策
             let canvasCtx = canvas.getContext("2d");
             let devicePixelRatio = window.devicePixelRatio || 1;
-            let backingStoreRatio = canvasCtx.backingStorePixelRatio || 1;
-            
-            if (devicePixelRatio !== backingStoreRatio) {
-                let ratio = devicePixelRatio / backingStoreRatio;
-                canvas.width = div.offsetWidth * ratio;
-                canvas.height = div.offsetHeight * ratio;
-                canvas.style.width = div.offsetWidth + "px";
-                canvas.style.height = div.offsetHeight + "px";
-                canvasCtx.scale(ratio, ratio);
-            }
-            else{
-                canvas.width = div.offsetWidth;
-                canvas.height = div.offsetHeight;
-                canvas.style.width = div.offsetWidth + "px";
-                canvas.style.height = div.offsetHeight + "px";
-                canvasCtx.scale(1, 1);
-            }
-            ctx.oldSize[0] = div.offsetWidth;
-            ctx.oldSize[1] = div.offsetHeight;
+            if (devicePixelRatio < 1) { // 縮小表示の時の対応
+                devicePixelRatio = 1;
+            }            
+            let ratio = devicePixelRatio;
+            canvas.width = width * ratio;
+            canvas.height = height * ratio;
+            canvasCtx.scale(ratio, ratio);
+            ctx.oldSize[0] = width;
+            ctx.oldSize[1] = height;
+            draw();
         }
-        draw();
-
     };
 
 
