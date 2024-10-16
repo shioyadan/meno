@@ -13,9 +13,9 @@ Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC.
     ./embed your_area_report.txt
     ```
 
-## Introduction
+## Development
 
-This project is specifically designed for development on Node.js running on Ubuntu 24.04.  In case of compatibility issues, the following Docker environment is recommended.
+This project is specifically designed for development on Node.js (version 18).  In case of compatibility issues, the following Docker environment is recommended.
 
 ```bash
 # Initialize Node modules
