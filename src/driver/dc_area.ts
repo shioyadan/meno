@@ -1,8 +1,9 @@
 import { FileReader, FileNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver";
 
-class FileInfoDriver {
+class DC_AreaDriver {
 
-    count = 0; // プログレスバー用
+    count_ = 0; // プログレスバー用
+    GIVE_UP_LINE_ = 100; // 100 行以上読んだら諦める
 
     constructor() {
     }
@@ -15,8 +16,17 @@ class FileInfoDriver {
         let nextID = 1;
         let lastLine = ""; 
         let top = "";        // トップモジュール名
+        let lineNum = 0;
+        let isDC_ = false;
 
         reader.onReadLine((line: string) => {
+            lineNum++;
+
+            if (lineNum > this.GIVE_UP_LINE_ && !isDC_) {
+                errorCallback("This file may not be DC area report file.");
+                return;
+            }
+
             // 各行をスペースで分割して単語にする
             let words = line.trim().split(/\s+/);
             if (words.length != 7 || isNaN(parseFloat(words[1]))) { // 要素が7個かつ，2つめが数字のときのみ処理
@@ -31,6 +41,8 @@ class FileInfoDriver {
             }
             lastLine = "";
             
+            isDC_ = true;
+
             let instance = words[0];
             if (top == "") {    // １行目だけはトップモジュール名を表す
                 top = instance;
@@ -128,4 +140,4 @@ class FileInfoDriver {
     }
 };
 
-export default FileInfoDriver;
+export default DC_AreaDriver;

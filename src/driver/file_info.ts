@@ -29,7 +29,7 @@ class FileInfoDriver {
         return sizeAndCount;
     };
 
-    load(reader: FileReader, finishCallback: FinishCallback, progressCallback: ProgressCallback, ErrorCallback: ErrorCallback) {
+    load(reader: FileReader, finishCallback: FinishCallback, progressCallback: ProgressCallback, errorCallback: ErrorCallback) {
 
         // 各ノードに id をふり，各ノードは自分の親の id をダンプする
         // id=0 は実際には存在しない仮のルートノードとなる
@@ -45,7 +45,8 @@ class FileInfoDriver {
             // process.stdout.write(`${id}\t${parent}\t${src.key}\t${src.isDirectory?1:0}\t${src.fileCount}\t${src.size}\n`);
             let args = line.split(/\t/);
             if (args.length != 6) {
-                console.log(`invalid line: ${line}`);
+                // console.log(`invalid line: ${line}`);
+                errorCallback("This files may not be file info file.");
                 return;
             }
 

@@ -1,5 +1,5 @@
 type FinishCallback = (fileNode: FileNode|null) => void;
-type ErrorCallback = (error: boolean, errorMessage: string) => void;
+type ErrorCallback = (errorMessage: string) => void;
 type ProgressCallback = (s: string) => void;
 type ReadLineHandler = (line: string) => void;
 type CloseHandler = () => void;

@@ -63,9 +63,11 @@ class Store {
                 (filePath)  => { // 読み込み状態の更新
                     // this.trigger(CHANGE.TREE_LOADING, this, context, filePath);       
                 },
-                (error, errorMessage) => { // error handler
+                (errorMessage) => { // error handler
                     fileReader.cancel();
+                    this.tree = null;
                     console.log(`error: ${errorMessage}`);
+                    this.trigger(CHANGE.TREE_LOADED);
                 }
             );
         });
