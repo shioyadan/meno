@@ -6,12 +6,14 @@ production:
 	mkdir -p dist
 	npx webpack --mode production
 	cp src/embed.sh dist/embed.sh
+	cp src/THIRD-PARTY-LICENSES.md dist/THIRD-PARTY-LICENSES.md
 
 serve:
 	npx webpack serve --open
 
 init:
 	npm install
+	npx license-checker --production --relativeLicensePath > THIRD-PARTY-LICENSES.md
 
 clean:
 	rm dist -f -r
