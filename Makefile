@@ -5,6 +5,7 @@ all:
 production:
 	mkdir -p dist
 	npx webpack --mode production
+	cp src/embed.sh dist/embed.sh
 
 serve:
 	npx webpack serve --open

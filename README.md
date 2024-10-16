@@ -2,6 +2,17 @@
 
 Meno is a tool that visualizes hierarchical data, such as the sizes in directory trees or synthesized circuit sizes. It is capable of being built into a single, standalone HTML file.
 
+Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC.
+
+## How to use
+
+* Download and extract the pre-built files from https://github.com/shioyadan/meno/releases.
+* Drag and drop an input file onto index.html to visualize it.
+* You can create an HTML file with your input file embedded by passing the input file to embed.sh:
+    ```bash
+    ./embed your_area_report.txt
+    ```
+
 ## Introduction
 
 This project is specifically designed for development on Node.js running on Ubuntu 24.04.  In case of compatibility issues, the following Docker environment is recommended.
