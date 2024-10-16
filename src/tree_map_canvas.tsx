@@ -122,7 +122,8 @@ const TreeMapCanvas = (props: {store: Store;}) => {
 
         // リサイズ時のリスナー
         const observer = new ResizeObserver((entries) => {
-            handleResize();
+            // handleResize 内で DOM をいじる必要があるが，ResizeObserver がそれを許さないので非同期で実行
+            setTimeout(handleResize, 0); 
         });
         if (divRef.current) {
             observer.observe(divRef.current);
