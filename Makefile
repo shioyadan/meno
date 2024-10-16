@@ -23,4 +23,4 @@ docker-build:
 
 pack:
 	make production
-	sed -i.bak -e '/^__MENO_INITIAL_LOADING_DATA_PLACE_HOLDER__/{r ./work/rsd_dc.txt' -e 'd}' ./dist/index.html
+	sed -i.bak -e '/^__MENO_INITIAL_LOADING_DATA_PLACE_HOLDER__/{r ./work/rsd-vidado-area.txt' -e 'd}' ./dist/index.html

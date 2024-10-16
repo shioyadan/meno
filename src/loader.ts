@@ -1,9 +1,11 @@
-import { FileReader, FileNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver/driver";
-
 import FileInfoDriver from "./driver/file_info";
 import DC_AreaDriver from "./driver/dc_area";
+import VivadoAreaDriver from "./driver/vivado_area";
 
-let driverList = [FileInfoDriver, DC_AreaDriver];
+let driverList = [FileInfoDriver, DC_AreaDriver, VivadoAreaDriver];
+
+
+import { FileReader, FileNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver/driver";
 
 class Loader {
     driver_: FileInfoDriver | DC_AreaDriver | null;

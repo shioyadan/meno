@@ -1,15 +1,15 @@
 import { FileReader, FileNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver";
 
-class DC_AreaDriver {
+class VivadoAreaDriver {
 
     count_ = 0; // プログレスバー用
     GIVE_UP_LINE_ = 100; // 100 行以上読んだら諦める
 
     constructor() {
     }
-    
+
     isValidFloat(str: string) {
-        return /^-?\d+(\.\d+)?$/.test(str);
+        return /^-?\d+(\.\d+)?$/.test(str.trim());
     }
 
     load(reader: FileReader, finishCallback: FinishCallback, progressCallback: ProgressCallback, errorCallback: ErrorCallback) {
@@ -18,47 +18,36 @@ class DC_AreaDriver {
         // ドットで繋がった部分は擬似ノードと見なすため，それの記録 ID->isPseudo
         let pseudoMap: Record<number, boolean> = {};    
         let nextID = 1;
-        let lastLine = ""; 
-        let top = "";        // トップモジュール名
         let lineNum = 0;
-        let isDC_ = false;
+        let isVivado_ = false;
+        let curNodes = [];
 
         reader.onReadLine((line: string) => {
             lineNum++;
 
-            if (lineNum > this.GIVE_UP_LINE_ && !isDC_) {
+            if (lineNum > this.GIVE_UP_LINE_ && !isVivado_) {
                 errorCallback("This file may not be DC area report file.");
                 return;
             }
 
-            // 各行をスペースで分割して単語にする
-            let words = line.trim().split(/\s+/);
-            if (words.length != 7 || !this.isValidFloat(words[1])) { // 要素が7個かつ，2つめが数字のときのみ処理
-                words = (lastLine + line).trim().split(/\s+/);
-                if (words.length != 7 || !this.isValidFloat(words[1])) { // 要素が7個かつ，2つめが数字のときのみ処理
-                    lastLine = line;
-                    return;
-                }
-                else {
-                    // 結合した結果マッチ
-                }
-            }
-            lastLine = "";
-            
-            isDC_ = true;
-
-            let instance = words[0];
-            if (top == "") {    // １行目だけはトップモジュール名を表す
-                top = instance;
-            }
-            else {  // トップモジュール名を含める
-                instance = top + "/" + instance;
+            // 各行を | で分割して単語にする
+            const words = line.trim().split(/\|/);
+            if (words.length != 12 || !this.isValidFloat(words[3])) { // 要素が8個かつ，3つめが数字のときのみ処理
+                return;
             }
 
-            const nodeNames = instance.split(/[\/]/);
-            // const nodeSize = Math.floor(Number(words[1]));    // Cell area
-            const nodeSize = Number(words[1]);    // Cell area
-            
+            isVivado_ = true;
+
+            const match = words[1].match(/^ */);
+            const level = match ? ((match[0].length - 1) / 2) : 0;
+    
+            const instance = words[1].trim();
+            curNodes[level] = instance;
+            const fullPath = curNodes.slice(0, level+1).join("/");
+    
+            const nodeNames = fullPath.split(/[\/]/);
+            const nodeSize = Number(words[3]);    // Total LUTs
+                
             // 目的となるノードを探す
             let node = tree;
             for (let i of nodeNames) {
@@ -144,4 +133,4 @@ class DC_AreaDriver {
     }
 };
 
-export default DC_AreaDriver;
+export default VivadoAreaDriver;
