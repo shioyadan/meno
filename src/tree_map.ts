@@ -135,6 +135,11 @@ class TreeMap {
         keys = keys.filter((key) => {
             return !(this.getCriteria(fileChildren[key]) < 1);
         });
+        // フィルタ結果を反映させる
+        let fileChildrenFiltered: Record<string, FileNode> = {};
+        for (let key of keys) {
+            fileChildrenFiltered[key] = fileChildren[key];
+        }
 
         // tree 直下のファイル/ディレクトリのサイズでソート
         keys.sort((a, b) => {
@@ -187,7 +192,7 @@ class TreeMap {
         }
 
         let divTree = new DivNode;
-        makeDivNode(divTree, keys, fileChildren);
+        makeDivNode(divTree, keys, fileChildrenFiltered);
         return divTree;
     };
 
@@ -291,7 +296,7 @@ class TreeMap {
         for (let level = 1; level < 100; level++) {
             let nextAreas: any[] = [];
             for (let a of curAreas) {
-                if (a.fileNode.children) {
+                if (a.fileNode.children && Object.keys(a.fileNode.children).length > 0) {
                     let r = [
                         a.rect[0] + margin[0],
                         a.rect[1] + margin[1],
