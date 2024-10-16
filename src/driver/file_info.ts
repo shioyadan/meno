@@ -1,4 +1,4 @@
-import { FileReader, FileNode, FinishCallback, ProgressCallback} from "./driver";
+import { FileReader, FileNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver";
 
 class FileInfoDriver {
 
@@ -29,7 +29,7 @@ class FileInfoDriver {
         return sizeAndCount;
     };
 
-    load(reader: FileReader, finishCallback: FinishCallback, progressCallback: ProgressCallback) {
+    load(reader: FileReader, finishCallback: FinishCallback, progressCallback: ProgressCallback, ErrorCallback: ErrorCallback) {
 
         // 各ノードに id をふり，各ノードは自分の親の id をダンプする
         // id=0 は実際には存在しない仮のルートノードとなる

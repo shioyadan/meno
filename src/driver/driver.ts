@@ -1,4 +1,5 @@
 type FinishCallback = (fileNode: FileNode|null) => void;
+type ErrorCallback = (error: boolean, errorMessage: string) => void;
 type ProgressCallback = (s: string) => void;
 type ReadLineHandler = (line: string) => void;
 type CloseHandler = () => void;
@@ -22,9 +23,14 @@ class FileReader {
     readLineHandler_: ReadLineHandler|null = null;
     closeHandler_: CloseHandler|null = null;
     content_ = "";
+    cancel_ = false;
     
     constructor(content: string) {
         this.content_ = content;
+    }
+
+    cancel() {
+        this.cancel_ = true;
     }
 
     onReadLine(readLineHandler: ReadLineHandler) {
@@ -38,11 +44,16 @@ class FileReader {
         const lines = this.content_.trim().split("\n");
         // const lines = rawStr.trim().split("\n");
         for (let i of lines) {
+            if (this.cancel_) {
+                break;
+            }
             this.readLineHandler_?.(i);
         }
-        this.closeHandler_?.();
+        if (!this.cancel_)
+            this.closeHandler_?.();
     }
 }
 
-export { FileReader, FileNode, FinishCallback, ProgressCallback, CloseHandler, ReadLineHandler};
+export { FileReader, FileNode, FinishCallback, 
+    ProgressCallback, ErrorCallback, CloseHandler, ReadLineHandler};
 

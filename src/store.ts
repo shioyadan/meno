@@ -53,15 +53,19 @@ class Store {
         this.on(ACTION.FILE_IMPORT, (inputStr: string) => {
             let fileReader = new FileReader(inputStr);
 
+            this.treeMapRenderer.clear();
             this.loader_.load(
                 fileReader, 
                 (tree) => { // finish handler
                     this.tree = tree;
                     this.trigger(CHANGE.TREE_LOADED);
                 },
-                (filePath)  => {
-                    // 読み込み状態の更新
+                (filePath)  => { // 読み込み状態の更新
                     // this.trigger(CHANGE.TREE_LOADING, this, context, filePath);       
+                },
+                (error, errorMessage) => { // error handler
+                    fileReader.cancel();
+                    console.log(`error: ${errorMessage}`);
                 }
             );
         });
