@@ -1,8 +1,9 @@
 import FileInfoDriver from "./driver/file_info";
 import DC_AreaDriver from "./driver/dc_area";
 import VivadoAreaDriver from "./driver/vivado_area";
+import GenusAreaDriver from "./driver/genus_area";
 
-let driverList = [FileInfoDriver, DC_AreaDriver, VivadoAreaDriver];
+let driverList = [FileInfoDriver, DC_AreaDriver, VivadoAreaDriver, GenusAreaDriver];
 
 
 import { FileReader, FileNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver/driver";

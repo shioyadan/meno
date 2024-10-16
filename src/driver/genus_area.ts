@@ -1,15 +1,15 @@
 import { FileReader, FileNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver";
 
-class VivadoAreaDriver {
+class GenusAreaDriver {
 
     count_ = 0; // プログレスバー用
     GIVE_UP_LINE_ = 100; // 100 行以上読んだら諦める
 
     constructor() {
     }
-
+    
     isValidFloat(str: string) {
-        return /^-?\d+(\.\d+)?$/.test(str.trim());
+        return /^-?\d+(\.\d+)?$/.test(str);
     }
 
     load(reader: FileReader, finishCallback: FinishCallback, progressCallback: ProgressCallback, errorCallback: ErrorCallback) {
@@ -18,35 +18,29 @@ class VivadoAreaDriver {
         // ドットで繋がった部分は擬似ノードと見なすため，それの記録 ID->isPseudo
         let pseudoMap: Record<number, boolean> = {};    
         let nextID = 1;
+        let top = "";        // トップモジュール名
         let lineNum = 0;
-        let isVivado_ = false;
-        let curNodes = [];
+        let isGenus_ = false;
 
         reader.onReadLine((line: string) => {
             lineNum++;
 
-            if (lineNum > this.GIVE_UP_LINE_ && !isVivado_) {
-                errorCallback("This file may not be Vivado area report file.");
+            if (lineNum > this.GIVE_UP_LINE_ && !isGenus_) {
+                errorCallback("This file may not Genus DC area report file.");
                 return;
             }
 
-            // 各行を | で分割して単語にする
-            const words = line.trim().split(/\|/);
-            if (words.length != 12 || !this.isValidFloat(words[3])) { // 要素が8個かつ，3つめが数字のときのみ処理
+            // 各行をスペースで分割して単語にする
+            const words = line.trim().split(/\s+/);
+            if (words.length != 8 || !this.isValidFloat(words[2])) { // 要素が8個かつ，3つめが数字のときのみ処理
                 return;
             }
+            
+            isGenus_ = true;
 
-            isVivado_ = true;
-
-            const match = words[1].match(/^ */);
-            const level = match ? ((match[0].length - 1) / 2) : 0;
-    
-            const instance = words[1].trim();
-            curNodes[level] = instance;
-            const fullPath = curNodes.slice(0, level+1).join("/");
-    
-            const nodeNames = fullPath.split(/[\/]/);
-            const nodeSize = Number(words[3]);    // Total LUTs
+            const instance = words[0];
+            const nodeNames = instance.split(/[\/]/);
+            const nodeSize = Number(words[3]);    // Cell area
                 
             // 目的となるノードを探す
             let node = tree;
@@ -129,8 +123,8 @@ class VivadoAreaDriver {
         else {
             str = "" + num;
         }
-        return " [" + str + "LUTs ]";
+        return " [" + str + "]";
     }
 };
 
-export default VivadoAreaDriver;
+export default GenusAreaDriver;
