@@ -25,6 +25,8 @@ class TreeMapCanvasContext {
     lastTouchCenter: { x: number; y: number } = {x: 0, y: 0};    // ２本指でのタッチ中心
     lastTouchPosition: { x: number; y: number } = {x: 0, y: 0}; // 一本指でのタッチ位置
 
+    resizeObserver: ResizeObserver|null = null;
+
     ZOOM_RATIO = 0.8;
     ZOOM_ANIMATION_SPEED = 0.07;
     zoomAnimationID: number|null = null;
@@ -33,154 +35,31 @@ class TreeMapCanvasContext {
 
 const TreeMapCanvas = (props: {store: Store;}) => {
     const store = props.store;
-    const canvasRef = useRef(null); // canvas の DOM
+    const contextRef = useRef(new TreeMapCanvasContext);
+    const ctx = contextRef.current; // 再レンダリングのたびにクロージャーが作られるので，参照をここでとっても問題がない
+
     const divRef = useRef(null); // div の DOM
-    const context = useRef(new TreeMapCanvasContext);
+    const canvasRef = useRef<HTMLCanvasElement>(null); // canvas の DOM
 
-    useEffect(() => {   // マウント時
-        const canvas: any = canvasRef.current;
-        const ctx = context.current;
+    useEffect(() => {   
+        initialize();       // [] で依存なしで useEffect を使うとマウント時に呼ばれる
+        return finalize;    // useEffect は終了処理への参照を返すことになっている
+    }, []);
 
-        const handleMouseDoubleClick = (e: MouseEvent) => {
-            if (!store.tree) return;
-            const zoomIn = !e.shiftKey;
-            startZoomInOrOut(zoomIn, e.offsetX, e.offsetY);
-        };
-
-        const handleMouseWheel = (e: WheelEvent) => {
-            if (!store.tree) return;
-            startZoomInOrOut(e.deltaY < 0, e.offsetX, e.offsetY);
-        };
-
-        const handleMouseMove = (e: MouseEvent) => {
-            if (!store.tree) return;
-            if (ctx.inDrag) {
-                const newViewPoint = [
-                    ctx.viewPoint[0] + ctx.prevMousePoint[0] - e.offsetX,
-                    ctx.viewPoint[1] + ctx.prevMousePoint[1] - e.offsetY,
-                ];
-                ctx.viewPoint = newViewPoint;
-                ctx.prevMousePoint = [e.offsetX, e.offsetY];
-                draw();
-            }
-            let pointedFileNode = 
-                store.treeMapRenderer.getFileNodeFromPoint([e.offsetX, e.offsetY]);
-            let pointedPath = 
-                store.treeMapRenderer.getPathFromFileNode(pointedFileNode);
-            //console.log(self.pointedPath);
-            store.trigger(ACTION.CANVAS_POINTER_CHANGE, pointedPath, pointedFileNode);
-
-        };
-
-        const handleMouseDown = (e: MouseEvent) => {
-            if (!store.tree) return;
-            if (e.buttons & 1) {
-                ctx.inDrag = true
-                ctx.prevMousePoint = [e.offsetX, e.offsetY];
-            }
-        };
-
-        const handleMouseUp = (e: MouseEvent) => {
-            ctx.inDrag = false;
-        };
+    const initialize = () => {   // マウント時
+        const canvas: HTMLCanvasElement = canvasRef.current!;  // canvas の DOM
 
         canvas.ondblclick = handleMouseDoubleClick;
-        canvas.onmousewheel = handleMouseWheel;
+        canvas.addEventListener("wheel", handleMouseWheel);
         canvas.onmousemove = handleMouseMove;
         canvas.onmousedown = handleMouseDown;
         canvas.onmouseup = handleMouseUp;
-
-        // ピンチズームおよびタッチ移動対応用のタッチイベントハンドラ
-        const handleTouchStart = (e: TouchEvent) => {
-            if (e.touches.length == 2) { // 2本指でのタッチ開始
-                ctx.initialTouchDistance = getTouchDistance(e.touches[0], e.touches[1]);
-                ctx.lastTouchCenter = getTouchCenter(e.touches[0], e.touches[1]);
-                ctx.initialZoomLevel = ctx.zoomLevel; // ズームレベルを保存
-                ctx.inPinch = true;
-            } else if (e.touches.length == 1) { // 1本指でのタッチ開始
-                ctx.lastTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-                ctx.inSwipe = true;
-            }
-        }
-
-        const handleTouchMove = (e: TouchEvent) => {
-            e.preventDefault(); // デフォルトのタッチスクロールを無効化
-            if (e.touches.length == 2 && ctx.inPinch) {
-                const newDistance = getTouchDistance(e.touches[0], e.touches[1]);
-                const zoomFactor = newDistance / ctx.initialTouchDistance;
-
-                // ピンチ操作に応じたズーム処理
-                let zoomLevel = ctx.initialZoomLevel + Math.log2(zoomFactor);
-                let center = getTouchCenter(e.touches[0], e.touches[1]);
-                setZoomRatio(zoomLevel, center.x, center.y);
-                draw();
-            } 
-            else if (e.touches.length == 1 && ctx.inSwipe) {
-                // 1本指の移動操作
-                const currentTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-                const dx = currentTouchPosition.x - ctx.lastTouchPosition.x;
-                const dy = currentTouchPosition.y - ctx.lastTouchPosition.y;
-
-                // ビューを移動
-                ctx.viewPoint = [ctx.viewPoint[0] - dx, ctx.viewPoint[1] - dy];
-                draw();
-
-                // タッチ位置を更新
-                ctx.lastTouchPosition = currentTouchPosition;
-            }
-        }
-
-        const handleTouchEnd = (e: TouchEvent) =>{
-            if (e.touches.length < 2) {  // 2本指での操作が終わったらリセット
-                ctx.inPinch = false;
-            }
-            if (e.touches.length == 1) { // 1本指のタッチが残っている場合はスクロールに移行するために位置を更新
-                ctx.lastTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-            }
-            if (e.touches.length < 1) { // 1本指のタッチが終了した場合もリセット
-                ctx.inSwipe = false;
-            }
-        }        
-        // 2つのタッチ間の距離を計算
-        const getTouchDistance = (touch1: Touch, touch2: Touch): number => {
-            const dx = touch1.clientX - touch2.clientX;
-            const dy = touch1.clientY - touch2.clientY;
-            return Math.sqrt(dx * dx + dy * dy);
-        }
-
-        // 2つのタッチの中心点を取得
-        const getTouchCenter = (touch1: Touch, touch2: Touch): { x: number; y: number } => {
-            return {
-                x: (touch1.clientX + touch2.clientX) / 2,
-                y: (touch1.clientY + touch2.clientY) / 2,
-            };
-        }
 
         canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
         canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
         canvas.addEventListener("touchend", handleTouchEnd, { passive: false });
         
-        document.onkeydown = (e) => {
-            if (!store.tree) return;
-            let key = e.key;
-            if (key === "ArrowUp") {
-                ctx.viewPoint = [ctx.viewPoint[0], ctx.viewPoint[1] - 50];
-                draw();
-            } else if (key === "ArrowDown") {
-                ctx.viewPoint = [ctx.viewPoint[0], ctx.viewPoint[1] + 50];
-                draw();
-            } else if (key === "ArrowLeft") {
-                ctx.viewPoint = [ctx.viewPoint[0] - 50, ctx.viewPoint[1]];
-                draw();
-            } else if (key === "ArrowRight") {
-                ctx.viewPoint = [ctx.viewPoint[0] + 50, ctx.viewPoint[1]];
-                draw();
-            } else if (key === "+") {
-                startZoomInOrOut(true, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
-            } else if (key === "-") {
-                startZoomInOrOut(false, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
-            }
-        };
+        document.onkeydown = handleKeydown
 
         store.on(CHANGE.CANVAS_ZOOM_IN, () => {
             startZoomInOrOut(true, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
@@ -200,34 +79,170 @@ const TreeMapCanvas = (props: {store: Store;}) => {
 
         // リサイズ時のリスナー
         const observer = new ResizeObserver((entries) => {
-            // handleResize 内で DOM をいじる必要があるが，ResizeObserver がそれを許さないので非同期で実行
+            // handleResize 内で DOM をいじる必要があるが，ResizeObserver がそれを許さないので非同期で遅延実行
             setTimeout(handleResize, 0); 
         });
         if (divRef.current) {
             observer.observe(divRef.current);
         }
+        ctx.resizeObserver = observer;
 
         // Canvas の初期化
         ctx.BASE_SIZE = [canvas.offsetWidth * 0.7, (canvas.offsetWidth * 0.7) / 16 * 9];
         ctx.viewPoint = [-(canvas.offsetWidth - ctx.BASE_SIZE[0]) / 2, -(canvas.offsetHeight - ctx.BASE_SIZE[1]) / 2];
+    };
 
-        // コンポーネントのアンマウント時にリスナーを削除
-        return () => {
-            if (divRef.current) {
-                observer.unobserve(divRef.current);
-            }
-            if (ctx.zoomAnimationID) {
-                clearInterval(ctx.zoomAnimationID); 
-            }
+    // コンポーネントのアンマウント時にリスナーを削除
+    const finalize = () => {
+        if (divRef.current) {
+            ctx.resizeObserver?.unobserve(divRef.current);
+        }
+        if (ctx.zoomAnimationID) {
+            clearInterval(ctx.zoomAnimationID); 
+        }
+    };
+    
+    const handleMouseDoubleClick = (e: MouseEvent) => {
+        if (!store.tree) return;
+        const zoomIn = !e.shiftKey;
+        startZoomInOrOut(zoomIn, e.offsetX, e.offsetY);
+    };
+
+    const handleMouseWheel = (e: WheelEvent) => {
+        if (!store.tree) return;
+        startZoomInOrOut(e.deltaY < 0, e.offsetX, e.offsetY);
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+        if (!store.tree) return;
+        if (ctx.inDrag) {
+            const newViewPoint = [
+                ctx.viewPoint[0] + ctx.prevMousePoint[0] - e.offsetX,
+                ctx.viewPoint[1] + ctx.prevMousePoint[1] - e.offsetY,
+            ];
+            ctx.viewPoint = newViewPoint;
+            ctx.prevMousePoint = [e.offsetX, e.offsetY];
+            draw();
+        }
+        let pointedFileNode = 
+            store.treeMapRenderer.getFileNodeFromPoint([e.offsetX, e.offsetY]);
+        let pointedPath = 
+            store.treeMapRenderer.getPathFromFileNode(pointedFileNode);
+        //console.log(self.pointedPath);
+        store.trigger(ACTION.CANVAS_POINTER_CHANGE, pointedPath, pointedFileNode);
+
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+        if (!store.tree) return;
+        if (e.buttons & 1) {
+            ctx.inDrag = true
+            ctx.prevMousePoint = [e.offsetX, e.offsetY];
+        }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+        ctx.inDrag = false;
+    };
+
+    // ピンチズームおよびタッチ移動対応用のタッチイベントハンドラ
+    const handleTouchStart = (e: TouchEvent) => {
+        if (e.touches.length == 2) { // 2本指でのタッチ開始
+            ctx.initialTouchDistance = getTouchDistance(e.touches[0], e.touches[1]);
+            ctx.lastTouchCenter = getTouchCenter(e.touches[0], e.touches[1]);
+            ctx.initialZoomLevel = ctx.zoomLevel; // ズームレベルを保存
+            ctx.inPinch = true;
+        } else if (e.touches.length == 1) { // 1本指でのタッチ開始
+            ctx.lastTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            ctx.inSwipe = true;
+        }
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+        e.preventDefault(); // デフォルトのタッチスクロールを無効化
+        if (e.touches.length == 2 && ctx.inPinch) {
+            const newDistance = getTouchDistance(e.touches[0], e.touches[1]);
+            const zoomFactor = newDistance / ctx.initialTouchDistance;
+
+            // ピンチ操作に応じたズーム処理
+            let zoomLevel = ctx.initialZoomLevel + Math.log2(zoomFactor);
+            let center = getTouchCenter(e.touches[0], e.touches[1]);
+            setZoomRatio(zoomLevel, center.x, center.y);
+            draw();
+        } 
+        else if (e.touches.length == 1 && ctx.inSwipe) {
+            // 1本指の移動操作
+            const currentTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            const dx = currentTouchPosition.x - ctx.lastTouchPosition.x;
+            const dy = currentTouchPosition.y - ctx.lastTouchPosition.y;
+
+            // ビューを移動
+            ctx.viewPoint = [ctx.viewPoint[0] - dx, ctx.viewPoint[1] - dy];
+            draw();
+
+            // タッチ位置を更新
+            ctx.lastTouchPosition = currentTouchPosition;
+        }
+    }
+
+    const handleTouchEnd = (e: TouchEvent) =>{
+        if (e.touches.length < 2) {  // 2本指での操作が終わったらリセット
+            ctx.inPinch = false;
+        }
+        if (e.touches.length == 1) { // 1本指のタッチが残っている場合はスクロールに移行するために位置を更新
+            ctx.lastTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+        if (e.touches.length < 1) { // 1本指のタッチが終了した場合もリセット
+            ctx.inSwipe = false;
+        }
+    }        
+    // 2つのタッチ間の距離を計算
+    const getTouchDistance = (touch1: Touch, touch2: Touch): number => {
+        const dx = touch1.clientX - touch2.clientX;
+        const dy = touch1.clientY - touch2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // 2つのタッチの中心点を取得
+    const getTouchCenter = (touch1: Touch, touch2: Touch): { x: number; y: number } => {
+        return {
+            x: (touch1.clientX + touch2.clientX) / 2,
+            y: (touch1.clientY + touch2.clientY) / 2,
         };
-    }, []);
+    }
 
+    const handleKeydown = (e: KeyboardEvent) => {
+        const canvas: any = canvasRef.current;
+        if (!store.tree) return;
+        let key = e.key;
+        if (key === "ArrowUp") {
+            ctx.viewPoint = [ctx.viewPoint[0], ctx.viewPoint[1] - 50];
+            draw();
+        } 
+        else if (key === "ArrowDown") {
+            ctx.viewPoint = [ctx.viewPoint[0], ctx.viewPoint[1] + 50];
+            draw();
+        } 
+        else if (key === "ArrowLeft") {
+            ctx.viewPoint = [ctx.viewPoint[0] - 50, ctx.viewPoint[1]];
+            draw();
+        } 
+        else if (key === "ArrowRight") {
+            ctx.viewPoint = [ctx.viewPoint[0] + 50, ctx.viewPoint[1]];
+            draw();
+        } 
+        else if (key === "+") {
+            startZoomInOrOut(true, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
+        } 
+        else if (key === "-") {
+            startZoomInOrOut(false, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
+        }
+    }
 
     const handleResize = () => {
 
         const canvas: any = canvasRef.current;
-        const div: any = divRef.current;
-        const ctx = context.current;
+        // const div: any = divRef.current;
         let width = canvas.clientWidth;
         let height = canvas.clientHeight;
 
@@ -256,7 +271,6 @@ const TreeMapCanvas = (props: {store: Store;}) => {
     const calcZoomRatio = (level: number) => Math.pow(2, level);
 
     const startZoomInOrOut = (direction: boolean, offsetX: number, offsetY: number) => {
-        const ctx = context.current;
         if (!ctx.inZoomAnimation) {
             ctx.zoomAnimationDirection = direction;
             ctx.zoomEndLevel = ctx.zoomLevel + (direction ? ctx.ZOOM_RATIO : -ctx.ZOOM_RATIO);
@@ -267,7 +281,6 @@ const TreeMapCanvas = (props: {store: Store;}) => {
     };
 
     const animateZoom = () => {
-        const ctx = context.current;
         const newZoomLevel = ctx.zoomLevel + 
             (ctx.zoomAnimationDirection ? ctx.ZOOM_ANIMATION_SPEED : -ctx.ZOOM_ANIMATION_SPEED);
         setZoomRatio(newZoomLevel, ctx.zoomBasePoint[0], ctx.zoomBasePoint[1]);
@@ -284,7 +297,6 @@ const TreeMapCanvas = (props: {store: Store;}) => {
     };
 
     const setZoomRatio = (newZoomLevel: number, offsetX: number, offsetY: number) => {
-        const ctx = context.current;
         const newZoomRatio = calcZoomRatio(newZoomLevel);
         const oldZoomRatio = calcZoomRatio(ctx.zoomLevel);
 
@@ -296,7 +308,6 @@ const TreeMapCanvas = (props: {store: Store;}) => {
     };
 
     const draw = () => {
-        const ctx = context.current;
         const canvas: any = canvasRef.current;  // DOM
         const width = canvas.width;
         const height = canvas.height;
@@ -317,7 +328,6 @@ const TreeMapCanvas = (props: {store: Store;}) => {
     };
     
     const fitToCanvas = () => {
-        const ctx = context.current;
         const canvas: any = canvasRef.current;  // DOM
         let targetScale = Math.min(
             canvas.offsetWidth / ctx.BASE_SIZE[0],
@@ -337,8 +347,6 @@ const TreeMapCanvas = (props: {store: Store;}) => {
 
     const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
         event.preventDefault();
-        // setError(null); // エラーのクリア
-
         const file = event.dataTransfer.files[0]; // ドロップされた最初のファイルを取得
         if (!file) {
             // setError("No file dropped");
