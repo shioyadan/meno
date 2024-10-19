@@ -17,6 +17,14 @@ class TreeMapCanvasContext {
     inDrag = false;
     prevMousePoint = [0, 0];
 
+    // タッチ関係
+    inPinch = false;
+    inSwipe = false;
+    initialTouchDistance = 0;
+    initialZoomLevel = 0;
+    lastTouchCenter: { x: number; y: number } = {x: 0, y: 0};    // ２本指でのタッチ中心
+    lastTouchPosition: { x: number; y: number } = {x: 0, y: 0}; // 一本指でのタッチ位置
+
     ZOOM_RATIO = 0.8;
     ZOOM_ANIMATION_SPEED = 0.07;
     zoomAnimationID: number|null = null;
@@ -82,6 +90,76 @@ const TreeMapCanvas = (props: {store: Store;}) => {
         canvas.onmousedown = handleMouseDown;
         canvas.onmouseup = handleMouseUp;
 
+        // ピンチズームおよびタッチ移動対応用のタッチイベントハンドラ
+        const handleTouchStart = (e: TouchEvent) => {
+            if (e.touches.length == 2) { // 2本指でのタッチ開始
+                ctx.initialTouchDistance = getTouchDistance(e.touches[0], e.touches[1]);
+                ctx.lastTouchCenter = getTouchCenter(e.touches[0], e.touches[1]);
+                ctx.initialZoomLevel = ctx.zoomLevel; // ズームレベルを保存
+                ctx.inPinch = true;
+            } else if (e.touches.length == 1) { // 1本指でのタッチ開始
+                ctx.lastTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                ctx.inSwipe = true;
+            }
+        }
+
+        const handleTouchMove = (e: TouchEvent) => {
+            e.preventDefault(); // デフォルトのタッチスクロールを無効化
+            if (e.touches.length == 2 && ctx.inPinch) {
+                const newDistance = getTouchDistance(e.touches[0], e.touches[1]);
+                const zoomFactor = newDistance / ctx.initialTouchDistance;
+
+                // ピンチ操作に応じたズーム処理
+                let zoomLevel = ctx.initialZoomLevel + Math.log2(zoomFactor);
+                let center = getTouchCenter(e.touches[0], e.touches[1]);
+                setZoomRatio(zoomLevel, center.x, center.y);
+                draw();
+            } 
+            else if (e.touches.length == 1 && ctx.inSwipe) {
+                // 1本指の移動操作
+                const currentTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                const dx = currentTouchPosition.x - ctx.lastTouchPosition.x;
+                const dy = currentTouchPosition.y - ctx.lastTouchPosition.y;
+
+                // ビューを移動
+                ctx.viewPoint = [ctx.viewPoint[0] - dx, ctx.viewPoint[1] - dy];
+                draw();
+
+                // タッチ位置を更新
+                ctx.lastTouchPosition = currentTouchPosition;
+            }
+        }
+
+        const handleTouchEnd = (e: TouchEvent) =>{
+            if (e.touches.length < 2) {  // 2本指での操作が終わったらリセット
+                ctx.inPinch = false;
+            }
+            if (e.touches.length == 1) { // 1本指のタッチが残っている場合はスクロールに移行するために位置を更新
+                ctx.lastTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+            if (e.touches.length < 1) { // 1本指のタッチが終了した場合もリセット
+                ctx.inSwipe = false;
+            }
+        }        
+        // 2つのタッチ間の距離を計算
+        const getTouchDistance = (touch1: Touch, touch2: Touch): number => {
+            const dx = touch1.clientX - touch2.clientX;
+            const dy = touch1.clientY - touch2.clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        // 2つのタッチの中心点を取得
+        const getTouchCenter = (touch1: Touch, touch2: Touch): { x: number; y: number } => {
+            return {
+                x: (touch1.clientX + touch2.clientX) / 2,
+                y: (touch1.clientY + touch2.clientY) / 2,
+            };
+        }
+
+        canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
+        canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+        canvas.addEventListener("touchend", handleTouchEnd, { passive: false });
+        
         document.onkeydown = (e) => {
             if (!store.tree) return;
             let key = e.key;
