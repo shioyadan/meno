@@ -40,6 +40,9 @@ class TreeMap {
     }
 
     getCriteria(fileNode: FileNode) {
+        // if (!fileNode) {
+        //     console.log("fileNode is null");
+        // }
         return this.cachedSizeMode ? fileNode.size : fileNode.fileCount;
     }
 
@@ -125,6 +128,7 @@ class TreeMap {
     // がなるべくバランスするようにしてある．これによってタイルのアスペクト比
     // が小さくなる･･･ と思う
     makeDivTree(fileNode: FileNode) {
+
         let fileChildren = fileNode.children;
         if (!fileChildren) {
             fileChildren = {};
@@ -133,7 +137,7 @@ class TreeMap {
 
         // 空ディレクトリ or 容量0のファイルははずしておかないと無限ループする
         keys = keys.filter((key) => {
-            return !(this.getCriteria(fileChildren[key]) < 1);
+            return !(this.getCriteria(fileChildren[key]) <= 0);
         });
         // フィルタ結果を反映させる
         let fileChildrenFiltered: Record<string, FileNode> = {};
