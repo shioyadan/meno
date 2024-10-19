@@ -168,6 +168,12 @@ const TreeMapCanvas = (props: {store: Store;}) => {
             let zoomLevel = ctx.initialZoomLevel + Math.log2(zoomFactor);
             let center = getTouchCenter(e.touches[0], e.touches[1]);
             setZoomRatio(zoomLevel, center.x, center.y);
+
+            // ビューを移動
+            const dx = center.x - ctx.lastTouchCenter.x;
+            const dy = center.y - ctx.lastTouchCenter.y;
+            ctx.viewPoint = [ctx.viewPoint[0] - dx, ctx.viewPoint[1] - dy];
+            ctx.lastTouchCenter = getTouchCenter(e.touches[0], e.touches[1]);
             draw();
         } 
         else if (e.touches.length == 1 && ctx.inSwipe) {
