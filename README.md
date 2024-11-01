@@ -17,7 +17,8 @@ Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC.
 * Drag and drop an input file onto `index.html` to visualize it.
 * You can create an HTML file with your input file embedded by passing the input file to `embed.sh`:
     ```bash
-    ./embed your_area_report.txt
+    ./embed.sh your_area_report.txt
+    # Generate your_area_report.txt.html at the same directory
     ```
 
 ## Development
@@ -33,7 +34,7 @@ make init
 make production
 
 # Build debug version
-make 
+make
 
 # Launch the development server
 make serve
@@ -53,4 +54,3 @@ make docker-run
 Copyright (C) 2016-2024 Ryota Shioya <shioya@ci.i.u-tokyo.ac.jp>
 
 This application is released under the 3-Clause BSD License, see LICENSE.md. This application bundles third-party packages in accordance with the licenses presented in THIRD-PARTY-LICENSES.md.
-
