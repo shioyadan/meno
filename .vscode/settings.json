@@ -4,5 +4,6 @@
         "Ryota",
         "Shioya",
         "Vivado"
-    ]
+    ],
+    "makefile.configureOnOpen": false
 }
