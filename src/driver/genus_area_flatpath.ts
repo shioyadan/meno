@@ -1,6 +1,6 @@
 import { FileReader, FileNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver";
 
-class GenusAreaDriver {
+class GenusAreaFlatpathDriver {
 
     count_ = 0; // プログレスバー用
     GIVE_UP_LINE_ = 100; // 100 行以上読んだら諦める
@@ -26,7 +26,7 @@ class GenusAreaDriver {
             lineNum++;
 
             if (lineNum > this.GIVE_UP_LINE_ && !isGenus_) {
-                errorCallback("This file may not Genus DC area report file.");
+                errorCallback("This file may not Genus area report file.");
                 return;
             }
 
@@ -127,4 +127,4 @@ class GenusAreaDriver {
     }
 };
 
-export default GenusAreaDriver;
+export default GenusAreaFlatpathDriver;
