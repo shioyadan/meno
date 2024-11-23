@@ -1,9 +1,9 @@
 import FileInfoDriver from "./driver/file_info";
 import DC_AreaDriver from "./driver/dc_area";
 import VivadoAreaDriver from "./driver/vivado_area";
-import GenusAreaDriver from "./driver/genus_area";
+import GenusAreaFlatpathDriver from "./driver/genus_area_flatpath";
 
-let driverList = [FileInfoDriver, DC_AreaDriver, VivadoAreaDriver, GenusAreaDriver];
+let driverList = [FileInfoDriver, DC_AreaDriver, VivadoAreaDriver, GenusAreaFlatpathDriver];
 
 
 import { FileReader, FileNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver/driver";
@@ -26,8 +26,7 @@ class Loader {
                 this.driver_.load(
                     reader, finishCallback, progressCallback, 
                     (errorMessage: string) => {
-                        console.log(`${errorMessage}`);
-                        console.log(`${this.driver_?.constructor.name} failed and try next driver`);
+                        console.log(`${this.driver_?.constructor.name} failed and try a next driver. ${errorMessage}`);
                         if(drivers.length > 0){
                             loadLocal(drivers);
                         }

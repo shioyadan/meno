@@ -26,7 +26,7 @@ class VivadoAreaDriver {
             lineNum++;
 
             if (lineNum > this.GIVE_UP_LINE_ && !isVivado_) {
-                errorCallback("This file may not be Vivado area report file.");
+                errorCallback("This file may not be a Vivado area report file.");
                 return;
             }
 

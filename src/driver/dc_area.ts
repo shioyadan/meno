@@ -27,7 +27,7 @@ class DC_AreaDriver {
             lineNum++;
 
             if (lineNum > this.GIVE_UP_LINE_ && !isDC_) {
-                errorCallback("This file may not be DC area report file.");
+                errorCallback("This file may not be a DC area report file.");
                 return;
             }
 

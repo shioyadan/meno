@@ -46,7 +46,7 @@ class FileInfoDriver {
             let args = line.split(/\t/);
             if (args.length != 6) {
                 // console.log(`invalid line: ${line}`);
-                errorCallback("This files may not be file info file.");
+                errorCallback("This file may not be a file information file.");
                 return;
             }
 
