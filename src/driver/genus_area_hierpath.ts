@@ -1,15 +1,16 @@
 import { FileReader, FileNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver";
 
-class GenusAreaFlatpathDriver {
+// HierarchicalPath
+class GenusAreaHierpathDriver {
 
     count_ = 0; // プログレスバー用
     GIVE_UP_LINE_ = 100; // 100 行以上読んだら諦める
 
     constructor() {
     }
-    
+
     isValidFloat(str: string) {
-        return /^-?\d+(\.\d+)?$/.test(str);
+        return /^-?\d+(\.\d+)?$/.test(str.trim());
     }
 
     load(reader: FileReader, finishCallback: FinishCallback, progressCallback: ProgressCallback, errorCallback: ErrorCallback) {
@@ -18,18 +19,19 @@ class GenusAreaFlatpathDriver {
         // ドットで繋がった部分は擬似ノードと見なすため，それの記録 ID->isPseudo
         let pseudoMap: Record<number, boolean> = {};    
         let nextID = 1;
-        let top = "";        // トップモジュール名
         let lineNum = 0;
         let includeGenus = false;
         let isGenus_ = false;
+        let curNodes = [];
 
         reader.onReadLine((line: string) => {
             lineNum++;
 
             if (lineNum > this.GIVE_UP_LINE_ && !isGenus_) {
-                errorCallback("This file may not Genus area report file (flat path).");
+                errorCallback("This file may not be a Genus area report file (hierarchical path).");
                 return;
             }
+
             if (line.match(/Genus/)) {
                 includeGenus = true;
             }
@@ -37,17 +39,32 @@ class GenusAreaFlatpathDriver {
                 return;
             }
 
+
             // 各行をスペースで分割して単語にする
-            const words = line.trim().split(/\s+/);
-            if (words.length != 8 || !this.isValidFloat(words[2])) { // 要素が8個かつ，3つめが数字のときのみ処理
+            // 要素が6個かつ，5個目が数字のときのみ処理
+            const result = line.match(/^(\s*)(\S.*)$/);
+            if (!result) return []; // 入力が空の場合などの処理
+
+            const leadingSpaces = result[1]; // 先頭のスペース
+            const level = leadingSpaces.length / 2;
+
+            const rest = result[2]; // 残りの部分
+            const words = rest.split(/\s+/);    // 残りの部分をスペース区切りで分割
+
+            let headLine = words.length == 5 && this.isValidFloat(words[4]) && level == 0;
+            let remainingLine = words.length == 6 && this.isValidFloat(words[5]);
+            if (!headLine && !remainingLine) { 
                 return;
             }
-            
-            isGenus_ = true;
 
-            const instance = words[0];
-            const nodeNames = instance.split(/[\/]/);
-            const nodeSize = Number(words[3]);    // Cell area
+            isGenus_ = true;
+    
+            const instance = words[0].trim();
+            curNodes[level] = instance;
+            const fullPath = curNodes.slice(0, level+1).join("/");
+    
+            const nodeNames = fullPath.split(/[\/]/);
+            const nodeSize = headLine ? Number(words[4]) : Number(words[5]);    // Total Area
                 
             // 目的となるノードを探す
             let node = tree;
@@ -134,4 +151,4 @@ class GenusAreaFlatpathDriver {
     }
 };
 
-export default GenusAreaFlatpathDriver;
+export default GenusAreaHierpathDriver;
