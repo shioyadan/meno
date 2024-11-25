@@ -141,7 +141,7 @@ class TreeMapRenderer {
         });
 
         // 1回太めに文字の枠線を書く
-        c.font = "bold " + self.FONT_SIZE + "px Century Gothic";
+        c.font = "bold " + self.FONT_SIZE + "px 'Century Gothic', Arial, sans-serif";
         c.lineWidth = 4; 
         if (theme.outlineText) {
             prevLevel = -1;
