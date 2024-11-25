@@ -67,15 +67,10 @@ const TreeMapCanvas = (props: {store: Store;}) => {
         store.on(CHANGE.CANVAS_ZOOM_OUT, () => {
             startZoomInOrOut(false, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
         });
-        store.on(CHANGE.TREE_LOADED, () => {
-            draw();
-        });
-        store.on(CHANGE.CANVAS_POINTER_CHANGED, () => {
-            draw();
-        });    
-        store.on(CHANGE.FIT_TO_CANVAS, function(){
-            fitToCanvas();
-        });
+        store.on(CHANGE.TREE_LOADED, draw);
+        store.on(CHANGE.CHANGE_UI_THEME, draw);    
+        store.on(CHANGE.CANVAS_POINTER_CHANGED, draw);    
+        store.on(CHANGE.FIT_TO_CANVAS, fitToCanvas);
 
         // リサイズ時のリスナー
         const observer = new ResizeObserver((entries) => {
@@ -329,7 +324,8 @@ const TreeMapCanvas = (props: {store: Store;}) => {
             virtualHeight,
             [ctx.viewPoint[0], ctx.viewPoint[1], ctx.viewPoint[0] + width, ctx.viewPoint[1] + height],
             ctx.isSizeMode,
-            (fileNode, isSizeMode) => props.store.fileNodeToStr(fileNode, isSizeMode)
+            (fileNode, isSizeMode) => props.store.fileNodeToStr(fileNode, isSizeMode),
+            props.store.uiTheme
         );
     };
     

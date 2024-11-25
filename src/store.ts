@@ -13,6 +13,7 @@ enum ACTION {
     MODE_CHANGE,
     DIALOG_VERSION_OPEN,
     FIT_TO_CANVAS,
+    CHANGE_UI_THEME,
     ACTION_END, // 末尾
 };
 
@@ -28,20 +29,28 @@ enum CHANGE {
     CANVAS_POINTER_CHANGED,
     DIALOG_VERSION_OPEN,
     FIT_TO_CANVAS,
+    CHANGE_UI_THEME,
 };
 
 class Store {
-    treeMapRenderer: TreeMapRenderer;
     loader_: Loader;
-    tree: FileNode|null = null;
-
     handlers_: { [key: number]: Array<(...args: any[]) => void> } = {};
+
+    // レンダラ
+    treeMapRenderer: TreeMapRenderer;
+    tree: FileNode|null = null;
 
     // canvas におけるマウスポインタの位置
     pointedPath: string = "";
     pointedFileNode: FileNode|null = null;
 
+    // UI color theme
+    uiTheme = "dark";
+
+    // Agate 由来で現在は使われていない
     isSizeMode = true;
+
+
     fileNodeToStr(fileNode: FileNode, isSizeMode: boolean) {
         return this.loader_ ? this.loader_.fileNodeToStr(fileNode, isSizeMode) : "";
     }
@@ -82,6 +91,10 @@ class Store {
         this.on(ACTION.CANVAS_ZOOM_OUT, () => { this.trigger(CHANGE.CANVAS_ZOOM_OUT); });
         this.on(ACTION.DIALOG_VERSION_OPEN, () => { this.trigger(CHANGE.DIALOG_VERSION_OPEN); });
         this.on(ACTION.FIT_TO_CANVAS, () => {this.trigger(CHANGE.FIT_TO_CANVAS);}); 
+        this.on(ACTION.CHANGE_UI_THEME, (theme: string) => {
+            this.uiTheme = theme;
+            this.trigger(CHANGE.CHANGE_UI_THEME);
+        });
     }
 
 

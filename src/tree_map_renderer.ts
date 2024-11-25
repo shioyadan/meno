@@ -2,13 +2,14 @@ import TreeMap from "./tree_map";
 import {FileNode} from "./loader";
 
 type FileNodeToStrFunction = (fileNode: FileNode, isSizeMode: boolean) => string;
+type ThemeName = "dark" | "light";
 
 class TreeMapRenderer {
     // タイル内の文字のフォントサイズ
     FONT_SIZE = 15;
 
     // カラーテーマ
-    THEME = {
+    THEME: Record<ThemeName, any> = {
         "dark": {
             backgroundColor: "#1C1E23",
             innerColor: (i: number) => ("hsl(" + ((0+i*28)%360) + ", 25%, 40%)"),
@@ -23,7 +24,7 @@ class TreeMapRenderer {
             textBodyColor: "rgb(255,255,255)",
             outlineText: true
         },
-    }
+    };
 
 
     // 各タイルの中の子タイルへのマージン
@@ -52,11 +53,14 @@ class TreeMapRenderer {
     // そこの上の viewPort を描画する．
     render(canvas: any, tree: FileNode|null, pointedFileNode: FileNode|null,
         virtualWidth: number, virtualHeight: number, viewPort: number[], isSizeMode: boolean,
-        fileNodeToStr: FileNodeToStrFunction
+        fileNodeToStr: FileNodeToStrFunction, themeName: string
     ) {
         let self = this;
         // let theme = this.THEME["light"];
-        let theme = this.THEME["dark"];
+        if (!(themeName in this.THEME)) {
+            themeName = "dark";
+        }
+        let theme = this.THEME[themeName as ThemeName];
 
         let width = canvas.width;
         let height = canvas.height;
