@@ -6,7 +6,7 @@ ENV GIT_SSL_NO_VERIFY=1
 RUN apt-get update && \
     apt-get install tzdata -y && \
     apt-get install --no-install-recommends -y \
-        less make bash-completion \
+        less make bash-completion zip \
         nodejs npm && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*

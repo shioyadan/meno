@@ -8,6 +8,7 @@ production:
 	cp src/embed.sh dist/embed.sh
 	cp src/launch_httpd.sh dist/launch_httpd.sh
 	cp ./THIRD-PARTY-LICENSES.md dist/THIRD-PARTY-LICENSES.md
+	cp ./README.md dist/README.md
 
 serve:
 	npx webpack serve --open
@@ -26,6 +27,10 @@ docker-run:
 docker-build:
 	cd docker; make docker-build
 
-pack:
+pack: production
+	rm -f meno.zip
+	cd dist; zip -r ../meno.zip .
+
+embed:
 	make production
 	sed -i.bak -e '/^__MENO_INITIAL_LOADING_DATA_PLACE_HOLDER__/{r ./work/rsd-vidado-area.txt' -e 'd}' ./dist/index.html
