@@ -16,6 +16,10 @@ class FileNode {
 
     constructor() {
     }
+
+    get hasChildren() {
+        return this.children != null && Object.keys(this.children).length > 0;
+    }
 }
 
 // 生データをファイル的に読み込むためのプロクシ

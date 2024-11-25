@@ -137,11 +137,10 @@ class TreeMapRenderer {
         // 文字領域が確保できた場合は描画
         let strAreas = areas.filter((a) => {
             let rect = a.rect;
-            return (rect[2] - rect[0] > 80 && rect[3] - rect[1] > 40);
+            return (rect[2] - rect[0] > 80 && rect[3] - rect[1] > 40) || a.fileNode == pointedFileNode;
         });
 
         // 1回太めに文字の枠線を書く
-
         c.font = "bold " + self.FONT_SIZE + "px Century Gothic";
         c.lineWidth = 4; 
         if (theme.outlineText) {
@@ -154,33 +153,40 @@ class TreeMapRenderer {
                 }
                 let pos = [Math.max(0, rect[0]) + self.TILE_MARGIN[0]/2, rect[1] + self.FONT_SIZE];
     
-                if (!a.fileNode.children) {
+                if (!a.fileNode.hasChildren) {
                     // ファイル
                     pos[0] += 10;
                     pos[1] += (rect[3] - rect[1] - self.FONT_SIZE*3) / 2;
                 }
-                c.strokeText(a.key, pos[0], pos[1]);
+                let key = a.key;
+                if (a.fileNode == pointedFileNode && a.fileNode.hasChildren) {
+                    key += "" + fileNodeToStr(a.fileNode, isSizeMode);  // ポイントされてるところだけは表示する
+                }
+                c.strokeText(key, pos[0], pos[1]);
     
-                if (!a.fileNode.children) {
+                if (!a.fileNode.hasChildren) {
                     c.strokeText(fileNodeToStr(a.fileNode, isSizeMode), pos[0], pos[1] + self.FONT_SIZE*1.2);
                 }
             }
         }
-        // 次に白を重ねて書く
-        // c.fillStyle = "rgb(255,255,255)";
+        // 次に白を重ねて書く（canvas のコンテキストをなるべく固定した方が速いので別のループに）
         c.fillStyle = theme.textBodyColor;
         for (let a of strAreas) {
             let rect = a.rect;
             let pos = [Math.max(0, rect[0]) + self.TILE_MARGIN[0]/2, rect[1] + self.FONT_SIZE];
-            if (!a.fileNode.children) {
+            if (!a.fileNode.hasChildren) {
                 // ファイル
                 pos[0] += 10;
                 pos[1] += (rect[3] - rect[1] - self.FONT_SIZE*3) / 2;
             }
 
-            c.fillText(a.key, pos[0], pos[1]);
+            let key = a.key;
+            if (a.fileNode == pointedFileNode && a.fileNode.hasChildren) {
+                key += "" + fileNodeToStr(a.fileNode, isSizeMode);
+            }
+            c.fillText(key, pos[0], pos[1]);
 
-            if (!a.fileNode.children) {
+            if (!a.fileNode.hasChildren) {
                 c.fillText(fileNodeToStr(a.fileNode, isSizeMode), pos[0], pos[1] + self.FONT_SIZE*1.2);
             }
         }
