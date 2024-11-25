@@ -27,7 +27,7 @@ class TreeMapCanvasContext {
 
     resizeObserver: ResizeObserver|null = null;
 
-    ZOOM_RATIO = 0.8;
+    ZOOM_RATIO = 0.5;
     ZOOM_ANIMATION_SPEED = 0.07;
     zoomAnimationID: number|null = null;
 };
@@ -217,11 +217,21 @@ const TreeMapCanvas = (props: {store: Store;}) => {
         if (!store.tree) return;
         let key = e.key;
         if (key === "ArrowUp") {
-            ctx.viewPoint = [ctx.viewPoint[0], ctx.viewPoint[1] - 50];
+            if (e.ctrlKey) {
+                startZoomInOrOut(true, canvas.offsetWidth/2, canvas.offsetHeight/2);
+            }
+            else {
+                ctx.viewPoint = [ctx.viewPoint[0], ctx.viewPoint[1] - 50];
+            }
             draw();
         } 
         else if (key === "ArrowDown") {
-            ctx.viewPoint = [ctx.viewPoint[0], ctx.viewPoint[1] + 50];
+            if (e.ctrlKey) {
+                startZoomInOrOut(false, canvas.offsetWidth/2, canvas.offsetHeight/2);
+            }
+            else {
+                ctx.viewPoint = [ctx.viewPoint[0], ctx.viewPoint[1] + 50];
+            }
             draw();
         } 
         else if (key === "ArrowLeft") {
