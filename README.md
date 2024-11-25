@@ -4,13 +4,15 @@ Meno is a tool that visualizes hierarchical data, such as the sizes of directory
 
 Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC.
 
+![demo](https://shioyadan.github.io/meno/demo/meno.gif)
+
 ## How to Use
 
 ### Web Version
 * Open [this link](https://shioyadan.github.io/meno/demo/) and drag and drop your area report file.
 * The following is a demo using the synthesis results of the [RSD processor](https://github.com/rsd-devel/rsd):
-    * [Vivado RSD Area](https://shioyadan.github.io/meno/demo/vivdao-rsd-lut.html)
-    * [Design Compiler RSD Area](https://shioyadan.github.io/meno/demo/dc-rsd-area.html)
+    * [DEMO: Vivado RSD Area](https://shioyadan.github.io/meno/demo/vivdao-rsd-lut.html)
+    * [DEMO: Design Compiler RSD Area](https://shioyadan.github.io/meno/demo/dc-rsd-area.html)
 
 ### Use in Your Local Environment
 * Download and extract the pre-built files from [this link](https://github.com/shioyadan/meno/releases).
