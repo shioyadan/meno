@@ -6,6 +6,7 @@ production:
 	mkdir -p dist
 	npx webpack --mode production
 	cp src/embed.sh dist/embed.sh
+	cp src/launch_httpd.sh dist/launch_httpd.sh
 	cp ./THIRD-PARTY-LICENSES.md dist/THIRD-PARTY-LICENSES.md
 
 serve:
