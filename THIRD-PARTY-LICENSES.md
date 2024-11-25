@@ -119,10 +119,10 @@
 │  ├─ email: zertosh@gmail.com
 │  ├─ path: node_modules/loose-envify
 │  └─ licenseFile: node_modules/loose-envify/LICENSE
-├─ meno@0.0.1
+├─ meno@0.0.2
 │  ├─ licenses: BSD-3-Clause
 │  ├─ publisher: Ryota Shioya
-│  ├─ path: /home/shioya/meno
+│  ├─ path: /home/shioya/work/meno
 │  └─ licenseFile: LICENSE.md
 ├─ object-assign@4.1.1
 │  ├─ licenses: MIT

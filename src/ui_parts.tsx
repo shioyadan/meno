@@ -130,7 +130,7 @@ const VersionDialog = (props: {store: Store;}) => {
         <Modal.Header closeButton>
             <Modal.Title>Version Information</Modal.Title>
         </Modal.Header>  
-        <Modal.Body>Meno Version 0.0.1</Modal.Body>             
+        <Modal.Body>Meno Version 0.0.2</Modal.Body>             
         </Modal>
     );
 };
