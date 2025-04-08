@@ -13,6 +13,24 @@ class GenusAreaHierpathDriver {
         return /^-?\d+(\.\d+)?$/.test(str.trim());
     }
 
+    // ハイフンじゃなくてスペースの場合があるので結合
+    concatHeaderTokens(tokens: string[]): string[] {
+        const target = new Set(["Cell-Count", "Cell-Area", "Net-Area", "Total-Area"]);
+        const result: string[] = [];
+        for (let i = 0; i < tokens.length;) {
+            const pair = tokens.slice(i, i + 2).join("-");
+            if (target.has(pair)) {
+                result.push(pair);
+                i += 2;
+            } else {
+                result.push(tokens[i]);
+                i++;
+            }
+        }
+        return result;
+    }
+    
+
     load(reader: FileReader, finishCallback: FinishCallback, progressCallback: ProgressCallback, errorCallback: ErrorCallback) {
 
         let tree = new FileNode();
@@ -20,10 +38,15 @@ class GenusAreaHierpathDriver {
         let pseudoMap: Record<number, boolean> = {};    
         let nextID = 1;
         let lineNum = 0;
-        let includeGenus = false;
-        let isGenus_ = false;
         let curNodes = [];
 
+        // パースの状態
+        let includeGenusMark = false;   // "Genus" という文字列が含まれているか
+        let isGenus_ = false;           // Genus と判断
+        let detectGenusHeader = false;  // Genus のヘッダを検出したかどうか
+        let totalAreaCol = -1;
+        let headerColNum = -1; // header の列の個数
+        
         reader.onReadLine((line: string) => {
             lineNum++;
 
@@ -32,39 +55,67 @@ class GenusAreaHierpathDriver {
                 return;
             }
 
+            // Genus のヘッダを検出
             if (line.match(/Genus/)) {
-                includeGenus = true;
+                includeGenusMark = true;
             }
-            if (!includeGenus) {
+            if (!includeGenusMark) {
                 return;
             }
 
+            // Instance Module という行があれば，それ以降はレポート
+            let headWords = line.trim().split(/\s+/);
+            headWords = this.concatHeaderTokens(headWords);
+            if (headWords[0] == "Instance" && headWords[1] == "Module") {
+                detectGenusHeader = true;
+                // "Total-Area" の列を探す
+                for (let i = 0; i < headWords.length; i++) {
+                    if (headWords[i] == "Total-Area") {
+                        totalAreaCol = i;
+                        break;
+                    }
+                }
+                headerColNum = headWords.length;
+                return;
+            }
+            if (!detectGenusHeader || totalAreaCol == -1) {
+                return;
+            }
 
-            // 各行をスペースで分割して単語にする
-            // 要素が6個かつ，5個目が数字のときのみ処理
-            const result = line.match(/^(\s*)(\S.*)$/);
-            if (!result) return []; // 入力が空の場合などの処理
+            // 先頭の空白と，それ以降の非空白にわける
+            const preWords = line.match(/^(\s*)(\S.*)$/);
+            if (!preWords) return []; // 入力が空の場合などの処理
+            const leadingSpaces = preWords[1]; // 先頭のスペース
+            const level = leadingSpaces.length / 2; // インデントのレベル
 
-            const leadingSpaces = result[1]; // 先頭のスペース
-            const level = leadingSpaces.length / 2;
-
-            const rest = result[2]; // 残りの部分
+            const rest = preWords[2]; // 残りの部分
             const words = rest.split(/\s+/);    // 残りの部分をスペース区切りで分割
+            if (words.length < 3) {
+                return; // トークンが3つより少ない場合は無効
+            }
 
-            let headLine = words.length == 5 && this.isValidFloat(words[4]) && level == 0;
-            let remainingLine = words.length == 6 && this.isValidFloat(words[5]);
-            if (!headLine && !remainingLine) { 
+            let curLineTotalAreaCol = totalAreaCol;
+            if (level == 0) {   
+                // 先頭行だけ Module の部分が空の時がある(=[1]が数値）ので，その場合は1列ずらす
+                if (words.length == headerColNum - 1) { 
+                    curLineTotalAreaCol--;
+                }
+            }
+
+            // totalAreaCol が見つからない場合は無視する
+            if (curLineTotalAreaCol >= words.length || !this.isValidFloat(words[curLineTotalAreaCol])) {
                 return;
             }
 
+            // Genus で確定
             isGenus_ = true;
-    
+
             const instance = words[0].trim();
             curNodes[level] = instance;
             const fullPath = curNodes.slice(0, level+1).join("/");
     
             const nodeNames = fullPath.split(/[\/]/);
-            const nodeSize = headLine ? Number(words[4]) : Number(words[5]);    // Total Area
+            const nodeSize = Number(words[curLineTotalAreaCol]);    // Total Area
                 
             // 目的となるノードを探す
             let node = tree;

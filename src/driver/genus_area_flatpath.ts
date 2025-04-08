@@ -20,30 +20,60 @@ class GenusAreaFlatpathDriver {
         let nextID = 1;
         let top = "";        // トップモジュール名
         let lineNum = 0;
-        let includeGenus = false;
-        let isGenus_ = false;
-
+        
+        // パースの状態
+        let includeGenusMark = false;   // "Genus" という文字列が含まれているか
+        let isGenusFlat_ = true;        // flat パス形式かどうか
+        let isGenus_ = false;           // Genus と判断
+        let detectGenusHeader = false;  // Genus のヘッダを検出したかどうか
+        let totalAreaCol = -1;
+        
         reader.onReadLine((line: string) => {
             lineNum++;
 
-            if (lineNum > this.GIVE_UP_LINE_ && !isGenus_) {
-                errorCallback("This file may not Genus area report file (flat path).");
+            if (lineNum > this.GIVE_UP_LINE_ && (!isGenus_ || !isGenusFlat_)) {
+                errorCallback("This file may not be Genus area report file (flat path).");
                 return;
             }
             if (line.match(/Genus/)) {
-                includeGenus = true;
+                includeGenusMark = true;
             }
-            if (!includeGenus) {
+            if (!includeGenusMark) {
                 return;
             }
 
             // 各行をスペースで分割して単語にする
             const words = line.trim().split(/\s+/);
-            if (words.length != 8 || !this.isValidFloat(words[2])) { // 要素が8個かつ，3つめが数字のときのみ処理
+
+            // Genus のヘッダを検出
+            // Instance Module という行があれば，それ以降はレポート
+            if (words[0] == "Instance" && words[1] == "Module") {
+                detectGenusHeader = true;
+                // "Total-Area" の列を探す
+                for (let i = 0; i < words.length; i++) {
+                    if (words[i] == "Total-Area") {
+                        totalAreaCol = i;
+                        break;
+                    }
+                }
+                return;
+            }
+            if (!detectGenusHeader || totalAreaCol == -1) {
+                return;
+            }
+
+            // totalAreaCol が見つからない場合は無視する
+            if (totalAreaCol >= words.length || !this.isValidFloat(words[totalAreaCol])) {
                 return;
             }
             
+            // Genus で確定
             isGenus_ = true;
+            //行頭にスペースがあれば，それは flat ではない
+            if (line.match(/^\s/)) {
+                isGenusFlat_ = false;
+                return;
+            }
 
             const instance = words[0];
             const nodeNames = instance.split(/[\/]/);
