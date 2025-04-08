@@ -33,6 +33,10 @@ class FileReader {
         this.content_ = content;
     }
 
+    clone() {
+        return new FileReader(this.content_);
+    }
+
     cancel() {
         this.cancel_ = true;
     }

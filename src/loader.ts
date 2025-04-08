@@ -24,9 +24,16 @@ class Loader {
             // this.driver_ = new FileInfoDriver();
             this.driver_ = drivers.shift();
             if (this.driver_) {
+                let newReader = reader.clone();
                 this.driver_.load(
-                    reader, finishCallback, progressCallback, 
+                    newReader, 
+                    (fileNode: FileNode|null) => {
+                        console.log(`${this.driver_?.constructor.name} successfully loaded the input.`);
+                        finishCallback(fileNode);
+                    }, 
+                    progressCallback, 
                     (errorMessage: string) => {
+                        newReader.cancel();
                         console.log(`${this.driver_?.constructor.name} failed and try a next driver. ${errorMessage}`);
                         if(drivers.length > 0){
                             loadLocal(drivers);

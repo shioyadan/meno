@@ -118,8 +118,10 @@ class DC_AreaDriver {
                 }
 
             }
-            finalize(tree);
-            finishCallback(tree.children ? tree.children[Object.keys(tree.children)[0]] : null);
+            if (isDC_) {
+                finalize(tree);
+                finishCallback(tree.children ? tree.children[Object.keys(tree.children)[0]] : null);
+            }
         });
 
         reader.load();

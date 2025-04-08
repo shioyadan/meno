@@ -38,6 +38,7 @@ class FileInfoDriver {
 
         let lineNum = 1;
         let mode = "import";
+        let isFileInfo = true;
         
         reader.onReadLine((line: string) => {
             let node = new FileNode();
@@ -47,6 +48,7 @@ class FileInfoDriver {
             if (args.length != 6) {
                 // console.log(`invalid line: ${line}`);
                 errorCallback("This file may not be a file information file.");
+                isFileInfo = false;
                 return;
             }
 
@@ -81,6 +83,10 @@ class FileInfoDriver {
         });
 
         reader.onClose(() => {
+            if (!isFileInfo) {
+                return;
+            }
+
             let root = idToNodeMap[0];
             if (idToNodeMap[0].children) {
                 // id=0 は実際には存在しないルートのノードなので，取り除く

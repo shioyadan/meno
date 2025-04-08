@@ -107,8 +107,10 @@ class VivadoAreaDriver {
                 }
 
             }
-            finalize(tree);
-            finishCallback(tree.children ? tree.children[Object.keys(tree.children)[0]] : null);
+            if (isVivado_) {
+                finalize(tree);
+                finishCallback(tree.children ? tree.children[Object.keys(tree.children)[0]] : null);
+            }
         });
 
         reader.load();
