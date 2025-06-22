@@ -3,11 +3,13 @@ import Store, { ACTION, CHANGE } from "./store";
 import { FileNode } from "./loader";
 
 
-import {Nav, Navbar, NavDropdown, Form, FormControl} from "react-bootstrap";
+import {Nav, Navbar, NavDropdown, Form, FormControl, InputGroup, Button} from "react-bootstrap";
 import { Modal } from "react-bootstrap";
 
 const ToolBar = (props: {store: Store;}) => {
     let store = props.store;
+    const [searchQuery, setSearchQuery] = useState("");
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     const openFile = async () => {
         if (typeof (window as any).showOpenFilePicker !== 'function') {
@@ -21,6 +23,34 @@ const ToolBar = (props: {store: Store;}) => {
         const contents = await file.text();
         store.trigger(ACTION.FILE_IMPORT, contents);   
         // console.log(contents); // ファイル内容を表示
+    };
+
+    // 検索処理
+    const handleSearch = (query: string) => {
+        setSearchQuery(query);
+        if (query.trim()) {
+            store.trigger(ACTION.SEARCH_NODES, query);
+        } else {
+            store.trigger(ACTION.CLEAR_SEARCH);
+        }
+    };
+
+    const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const query = e.target.value;
+        handleSearch(query);
+    };
+
+    const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Escape') {
+            setSearchQuery("");
+            store.trigger(ACTION.CLEAR_SEARCH);
+            searchInputRef.current?.blur();
+        }
+    };
+
+    const handleSearchClear = () => {
+        setSearchQuery("");
+        store.trigger(ACTION.CLEAR_SEARCH);
     };
 
     // メニューアイテムの選択時の処理
@@ -44,6 +74,32 @@ const ToolBar = (props: {store: Store;}) => {
         store.on(CHANGE.CHANGE_UI_THEME, () => {
             setTheme(store.uiTheme);
         });
+
+        // キーボードショートカットのイベントリスナーを追加
+        const handleKeydown = (event: KeyboardEvent) => {
+            // / キーが押されたときに検索ボックスにフォーカス
+            if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                // input要素やtextarea要素にフォーカスがある場合は無視
+                const activeElement = document.activeElement;
+                if (activeElement && (
+                    activeElement.tagName === 'INPUT' || 
+                    activeElement.tagName === 'TEXTAREA' ||
+                    (activeElement as HTMLElement).contentEditable === 'true'
+                )) {
+                    return;
+                }
+                
+                event.preventDefault();
+                searchInputRef.current?.focus();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeydown);
+
+        // クリーンアップ
+        return () => {
+            document.removeEventListener('keydown', handleKeydown);
+        };
     }, []);
 
     return (
@@ -84,6 +140,49 @@ const ToolBar = (props: {store: Store;}) => {
                     <i className="bi bi-arrows-fullscreen"></i> Fit to Canvas
                 </Nav.Link>
             </Nav>
+            
+            {/* 検索ボックス */}
+            <Nav className="ms-auto">
+                <div style={{ padding: "8px" }}>
+                    <InputGroup size="sm" style={{ width: "300px" }}>
+                        <FormControl
+                            ref={searchInputRef}
+                            placeholder="Search nodes... (Press '/' to focus)"
+                            value={searchQuery}
+                            onChange={handleSearchInputChange}
+                            onKeyDown={handleSearchKeyDown}
+                            style={{
+                                backgroundColor: theme === "dark" ? "#3e4651" : "#ffffff",
+                                color: theme === "dark" ? "#ffffff" : "#000000",
+                                border: `1px solid ${theme === "dark" ? "#5a6169" : "#ced4da"}`
+                            }}
+                        />
+                        {searchQuery && (
+                            <Button 
+                                variant="outline-secondary" 
+                                size="sm"
+                                onClick={handleSearchClear}
+                                style={{
+                                    borderColor: theme === "dark" ? "#5a6169" : "#ced4da",
+                                    color: theme === "dark" ? "#ffffff" : "#6c757d"
+                                }}
+                            >
+                                <i className="bi bi-x"></i>
+                            </Button>
+                        )}
+                        <Button 
+                            variant="outline-secondary" 
+                            size="sm"
+                            style={{
+                                borderColor: theme === "dark" ? "#5a6169" : "#ced4da",
+                                color: theme === "dark" ? "#ffffff" : "#6c757d"
+                            }}
+                        >
+                            <i className="bi bi-search"></i>
+                        </Button>
+                    </InputGroup>
+                </div>
+            </Nav>
             </Navbar.Collapse>
         </Navbar>
     );
@@ -92,6 +191,8 @@ const ToolBar = (props: {store: Store;}) => {
 const StatusBar = (props: {store: Store;}) => {
     let store = props.store;
     const [statusBarMessage, setStatusBarMessage] = useState("");
+    const [searchResultsCount, setSearchResultsCount] = useState(0);
+    const [searchQuery, setSearchQuery] = useState("");
     const [theme, setTheme] = useState(store.uiTheme); // 現在のテーマを管理
 
     useEffect(() => { // マウント時
@@ -102,7 +203,17 @@ const StatusBar = (props: {store: Store;}) => {
         store.on(CHANGE.CHANGE_UI_THEME, () => {
             setTheme(store.uiTheme);
         });
+        store.on(CHANGE.SEARCH_RESULTS_CHANGED, () => {
+            setSearchResultsCount(store.searchResults.length);
+            setSearchQuery(store.searchQuery);
+        });
     }, []);
+
+    const getSearchMessage = () => {
+        if (!searchQuery) return "";
+        if (searchResultsCount === 0) return ` | Search: "${searchQuery}" - No results found`;
+        return ` | Search: "${searchQuery}" - ${searchResultsCount} result${searchResultsCount > 1 ? 's' : ''} found`;
+    };
 
     return (
         // {/* <div style={{ height: "40px", backgroundColor: "#eee", padding: "10px", textAlign: "left", borderTop: "1px solid #ccc" }}>
@@ -112,7 +223,9 @@ const StatusBar = (props: {store: Store;}) => {
             paddingLeft: "10px", 
             textAlign: "left", borderTop: "0.5px solid " + theme == "dark" ? "#383B41" : "#C6C6C6" }}
         >
-            <span style={{ color: theme == "dark" ? "#C9CACB" : "#191919", fontSize: "15px" }}>{statusBarMessage}</span>
+            <span style={{ color: theme == "dark" ? "#C9CACB" : "#191919", fontSize: "15px" }}>
+                {statusBarMessage}{getSearchMessage()}
+            </span>
         </div>
     );
 };

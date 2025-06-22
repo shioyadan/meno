@@ -14,6 +14,8 @@ enum ACTION {
     DIALOG_VERSION_OPEN,
     FIT_TO_CANVAS,
     CHANGE_UI_THEME,
+    SEARCH_NODES,
+    CLEAR_SEARCH,
     ACTION_END, // 末尾
 };
 
@@ -30,6 +32,7 @@ enum CHANGE {
     DIALOG_VERSION_OPEN,
     FIT_TO_CANVAS,
     CHANGE_UI_THEME,
+    SEARCH_RESULTS_CHANGED,
 };
 
 class Store {
@@ -49,6 +52,10 @@ class Store {
 
     // Agate 由来で現在は使われていない
     isSizeMode = true;
+
+    // 検索機能
+    searchQuery: string = "";
+    searchResults: FileNode[] = [];
 
 
     fileNodeToStr(fileNode: FileNode, isSizeMode: boolean) {
@@ -95,9 +102,44 @@ class Store {
             this.uiTheme = theme;
             this.trigger(CHANGE.CHANGE_UI_THEME);
         });
+
+        this.on(ACTION.SEARCH_NODES, (query: string) => {
+            this.searchQuery = query;
+            this.searchResults = this.searchNodesByName(query);
+            this.trigger(CHANGE.SEARCH_RESULTS_CHANGED);
+        });
+
+        this.on(ACTION.CLEAR_SEARCH, () => {
+            this.searchQuery = "";
+            this.searchResults = [];
+            this.trigger(CHANGE.SEARCH_RESULTS_CHANGED);
+        });
     }
 
+    // ノード名で検索する関数
+    searchNodesByName(query: string): FileNode[] {
+        if (!this.tree || !query.trim()) {
+            return [];
+        }
 
+        const results: FileNode[] = [];
+        const searchTerm = query.toLowerCase();
+
+        const searchRecursive = (node: FileNode) => {
+            if (node.key.toLowerCase().includes(searchTerm)) {
+                results.push(node);
+            }
+
+            if (node.children) {
+                for (const childKey in node.children) {
+                    searchRecursive(node.children[childKey]);
+                }
+            }
+        };
+
+        searchRecursive(this.tree);
+        return results;
+    }
 
     on(event: CHANGE|ACTION, handler: (...args: any[]) => void): void {
         if (!(event in CHANGE || event in ACTION)) {

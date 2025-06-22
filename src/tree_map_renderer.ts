@@ -46,14 +46,12 @@ class TreeMapRenderer {
 
     getPathFromFileNode(fileNode: FileNode) {
         return this.treeMap_.getPathFromFileNode(fileNode);
-    };
-
-    // canvas に対し，tree のファイルツリーを
+    };    // canvas に対し，tree のファイルツリーを
     // virtualWidth/virtualHeight に対応した大きさの tree map を生成し，
     // そこの上の viewPort を描画する．
     render(canvas: any, tree: FileNode|null, pointedFileNode: FileNode|null,
         virtualWidth: number, virtualHeight: number, viewPort: number[], isSizeMode: boolean,
-        fileNodeToStr: FileNodeToStrFunction, themeName: string
+        fileNodeToStr: FileNodeToStrFunction, themeName: string, searchResults: FileNode[] = []
     ) {
         let self = this;
         // let theme = this.THEME["light"];
@@ -123,9 +121,7 @@ class TreeMapRenderer {
                 prevLevel = -1;
             }
             c.strokeRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
-        }
-
-        // ポインタが指しているファイルをハイライト
+        }        // ポインタが指しているファイルをハイライト
         // ループが異なるのは描画を上書きされないようにするため
         c.lineWidth = 6; 
         for (let a of areas) {
@@ -135,6 +131,18 @@ class TreeMapRenderer {
                 let rect = a.rect;
                 c.strokeRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
                 break;
+            }
+        }        // 検索結果のノードをハイライト
+        c.lineWidth = 4; 
+        c.strokeStyle = "#FFD700"; // ゴールド色でハイライト
+        for (let a of areas) {
+            if (searchResults.includes(a.fileNode)) {
+                let rect = a.rect;
+                c.strokeRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
+                
+                // 検索結果のノードには半透明のオーバーレイを追加
+                c.fillStyle = "rgba(255, 215, 0, 0.3)"; // 半透明のゴールド
+                c.fillRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
             }
         }
 
