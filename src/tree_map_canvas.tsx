@@ -33,7 +33,7 @@ class TreeMapCanvasContext {
 };
 
 
-const TreeMapCanvas = (props: {store: Store;}) => {
+const TreeMapCanvas = (props: {store: Store; onContextMenu?: (x: number, y: number, targetNode: any) => void;}) => {
     const store = props.store;
     const contextRef = useRef(new TreeMapCanvasContext);
     const ctx = contextRef.current; // 再レンダリングのたびにクロージャーが作られるので，参照をここでとっても問題がない
@@ -54,6 +54,7 @@ const TreeMapCanvas = (props: {store: Store;}) => {
         canvas.onmousemove = handleMouseMove;
         canvas.onmousedown = handleMouseDown;
         canvas.onmouseup = handleMouseUp;
+        canvas.oncontextmenu = handleContextMenu;
 
         canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
         canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
@@ -71,6 +72,11 @@ const TreeMapCanvas = (props: {store: Store;}) => {
         store.on(CHANGE.CHANGE_UI_THEME, draw);    
         store.on(CHANGE.CANVAS_POINTER_CHANGED, draw);    
         store.on(CHANGE.FIT_TO_CANVAS, fitToCanvas);
+        store.on(CHANGE.ROOT_NODE_CHANGED, () => {
+            // ルートノード変更時は表示をリセット
+            fitToCanvas();
+            draw();
+        });
 
         // リサイズ時のリスナー
         const observer = new ResizeObserver((entries) => {
@@ -106,6 +112,17 @@ const TreeMapCanvas = (props: {store: Store;}) => {
     const handleMouseWheel = (e: WheelEvent) => {
         if (!store.tree) return;
         startZoomInOrOut(e.deltaY < 0, e.offsetX, e.offsetY);
+    };
+
+    const handleContextMenu = (e: MouseEvent) => {
+        e.preventDefault(); // デフォルトのコンテキストメニューを無効化
+        if (!store.tree || !props.onContextMenu) return;
+
+        const fileNode = store.treeMapRenderer.getFileNodeFromPoint([e.offsetX, e.offsetY]);
+        if (fileNode) {
+            // クライアント座標でコンテキストメニューを表示
+            props.onContextMenu(e.clientX, e.clientY, fileNode);
+        }
     };
 
     const handleMouseMove = (e: MouseEvent) => {
