@@ -3,7 +3,7 @@ import Store, { ACTION, CHANGE } from "./store";
 import { FileNode } from "./loader";
 
 
-import {Nav, Navbar, NavDropdown, Form, FormControl, InputGroup, Button} from "react-bootstrap";
+import {Nav, Navbar, NavDropdown, Form, FormControl, InputGroup, Button, Dropdown} from "react-bootstrap";
 import { Modal } from "react-bootstrap";
 
 const ToolBar = (props: {store: Store;}) => {
@@ -191,6 +191,7 @@ const ToolBar = (props: {store: Store;}) => {
 const StatusBar = (props: {store: Store;}) => {
     let store = props.store;
     const [statusBarMessage, setStatusBarMessage] = useState("");
+    const [currentRootPath, setCurrentRootPath] = useState("");
     const [searchResultsCount, setSearchResultsCount] = useState(0);
     const [searchQuery, setSearchQuery] = useState("");
     const [theme, setTheme] = useState(store.uiTheme); // 現在のテーマを管理
@@ -202,6 +203,20 @@ const StatusBar = (props: {store: Store;}) => {
         });
         store.on(CHANGE.CHANGE_UI_THEME, () => {
             setTheme(store.uiTheme);
+        });
+        store.on(CHANGE.ROOT_NODE_CHANGED, () => {
+            if (store.currentRootNode === store.originalTree) {
+                setCurrentRootPath("");
+            } else if (store.currentRootNode) {
+                // ルートノードまでのパスを構築
+                let path = store.currentRootNode.key;
+                let parent = store.currentRootNode.parent;
+                while (parent) {
+                    path = parent.key + "/" + path;
+                    parent = parent.parent;
+                }
+                setCurrentRootPath(path);
+            }
         });
         store.on(CHANGE.SEARCH_RESULTS_CHANGED, () => {
             setSearchResultsCount(store.searchResults.length);
@@ -221,11 +236,24 @@ const StatusBar = (props: {store: Store;}) => {
         <div style={{ height: "30px", minHeight: "30px", 
             backgroundColor: theme == "dark" ? "#272a31": "#FAFAFA", 
             paddingLeft: "10px", 
+            paddingRight: "10px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
             textAlign: "left", borderTop: "0.5px solid " + theme == "dark" ? "#383B41" : "#C6C6C6" }}
         >
             <span style={{ color: theme == "dark" ? "#C9CACB" : "#191919", fontSize: "15px" }}>
                 {statusBarMessage}{getSearchMessage()}
             </span>
+            {currentRootPath && (
+                <span style={{ 
+                    color: theme == "dark" ? "#ffc107" : "#856404", 
+                    fontSize: "13px",
+                    fontStyle: "italic"
+                }}>
+                    Root: /{currentRootPath}
+                </span>
+            )}
         </div>
     );
 };
@@ -248,4 +276,236 @@ const VersionDialog = (props: {store: Store;}) => {
     );
 };
 
-export {ToolBar, StatusBar, VersionDialog};
+const ContextMenu = (props: {
+    store: Store;
+    show: boolean;
+    x: number;
+    y: number;
+    targetNode: FileNode | null;
+    onClose: () => void;
+}) => {
+    const { store, show, x, y, targetNode, onClose } = props;
+    const [theme, setTheme] = useState(store.uiTheme);
+
+    useEffect(() => {
+        store.on(CHANGE.CHANGE_UI_THEME, () => {
+            setTheme(store.uiTheme);
+        });
+    }, []);
+
+    const handleSetAsRoot = () => {
+        if (targetNode && targetNode.children) {
+            store.trigger(ACTION.SET_ROOT_NODE, targetNode);
+        }
+        onClose();
+    };
+
+    const handleSetParentAsRoot = () => {
+        store.trigger(ACTION.SET_PARENT_AS_ROOT);
+        onClose();
+    };
+
+    const handleResetRoot = () => {
+        store.trigger(ACTION.RESET_ROOT_NODE);
+        onClose();
+    };
+
+    if (!show || !targetNode) {
+        return null;
+    }
+
+    const canSetAsRoot = targetNode.children && Object.keys(targetNode.children).length > 0;
+    const isNotOriginalRoot = store.currentRootNode !== store.originalTree;
+    const hasParent = store.currentRootNode && store.currentRootNode.parent;
+
+    return (
+        <div
+            style={{
+                position: 'fixed',
+                top: y,
+                left: x,
+                zIndex: 1050,
+                backgroundColor: theme === "dark" ? "#343a40" : "#ffffff",
+                border: `1px solid ${theme === "dark" ? "#495057" : "#dee2e6"}`,
+                borderRadius: '4px',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+                minWidth: '200px'
+            }}
+        >
+            <div style={{ padding: '8px 0' }}>
+                <div
+                    style={{
+                        padding: '8px 16px',
+                        fontSize: '12px',
+                        color: theme === "dark" ? "#adb5bd" : "#6c757d",
+                        borderBottom: `1px solid ${theme === "dark" ? "#495057" : "#dee2e6"}`,
+                        marginBottom: '4px'
+                    }}
+                >
+                    {targetNode.key}
+                </div>
+                
+                {canSetAsRoot && (
+                    <div
+                        onClick={handleSetAsRoot}
+                        style={{
+                            padding: '8px 16px',
+                            cursor: 'pointer',
+                            color: theme === "dark" ? "#ffffff" : "#000000",
+                            backgroundColor: 'transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = theme === "dark" ? "#495057" : "#f8f9fa";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                    >
+                        <i className="bi bi-arrow-up-right-circle"></i> Set as Root
+                    </div>
+                )}
+                
+                {hasParent && (
+                    <div
+                        onClick={handleSetParentAsRoot}
+                        style={{
+                            padding: '8px 16px',
+                            cursor: 'pointer',
+                            color: theme === "dark" ? "#ffffff" : "#000000",
+                            backgroundColor: 'transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = theme === "dark" ? "#495057" : "#f8f9fa";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                    >
+                        <i className="bi bi-arrow-up"></i> Go Up One Level
+                    </div>
+                )}
+                
+                {isNotOriginalRoot && (
+                    <div
+                        onClick={handleResetRoot}
+                        style={{
+                            padding: '8px 16px',
+                            cursor: 'pointer',
+                            color: theme === "dark" ? "#ffffff" : "#000000",
+                            backgroundColor: 'transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = theme === "dark" ? "#495057" : "#f8f9fa";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                    >
+                        <i className="bi bi-house"></i> Reset to Original Root
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const Breadcrumb = (props: {store: Store;}) => {
+    const { store } = props;
+    const [breadcrumbPath, setBreadcrumbPath] = useState<FileNode[]>([]);
+    const [theme, setTheme] = useState(store.uiTheme);
+
+    useEffect(() => {
+        store.on(CHANGE.CHANGE_UI_THEME, () => {
+            setTheme(store.uiTheme);
+        });
+        
+        store.on(CHANGE.ROOT_NODE_CHANGED, () => {
+            setBreadcrumbPath(store.getBreadcrumbPath());
+        });
+
+        store.on(CHANGE.TREE_LOADED, () => {
+            setBreadcrumbPath(store.getBreadcrumbPath());
+        });
+
+        // 初期値を設定
+        setBreadcrumbPath(store.getBreadcrumbPath());
+    }, []);
+
+    const handleBreadcrumbClick = (node: FileNode) => {
+        if (node !== store.currentRootNode) {
+            store.trigger(ACTION.SET_ROOT_NODE, node);
+        }
+    };
+
+    if (breadcrumbPath.length <= 1) {
+        return null; // ルートレベルでは表示しない
+    }
+
+    return (
+        <div
+            style={{
+                position: 'absolute',
+                top: '10px',
+                left: '10px',
+                zIndex: 1000,
+                backgroundColor: theme === "dark" ? "rgba(52, 58, 64, 0.9)" : "rgba(255, 255, 255, 0.9)",
+                border: `1px solid ${theme === "dark" ? "#495057" : "#dee2e6"}`,
+                borderRadius: '6px',
+                padding: '8px 12px',
+                fontSize: '14px',
+                fontFamily: 'monospace',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                backdropFilter: 'blur(4px)',
+                maxWidth: '60%',
+                overflow: 'hidden'
+            }}
+        >
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                <i className="bi bi-house-fill" style={{ 
+                    marginRight: '8px', 
+                    color: theme === "dark" ? "#ffc107" : "#856404" 
+                }}></i>
+                {breadcrumbPath.map((node, index) => (
+                    <span key={index} style={{ display: 'flex', alignItems: 'center' }}>
+                        {index > 0 && (
+                            <i className="bi bi-chevron-right" style={{ 
+                                margin: '0 6px', 
+                                fontSize: '12px',
+                                color: theme === "dark" ? "#6c757d" : "#adb5bd"
+                            }}></i>
+                        )}
+                        <span
+                            onClick={() => handleBreadcrumbClick(node)}
+                            style={{
+                                cursor: index < breadcrumbPath.length - 1 ? 'pointer' : 'default',
+                                color: index === breadcrumbPath.length - 1 
+                                    ? (theme === "dark" ? "#ffffff" : "#000000")
+                                    : (theme === "dark" ? "#17a2b8" : "#007bff"),
+                                fontWeight: index === breadcrumbPath.length - 1 ? 'bold' : 'normal',
+                                textDecoration: index < breadcrumbPath.length - 1 ? 'underline' : 'none',
+                                maxWidth: '120px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                            }}
+                            onMouseEnter={(e) => {
+                                if (index < breadcrumbPath.length - 1) {
+                                    e.currentTarget.style.opacity = '0.7';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (index < breadcrumbPath.length - 1) {
+                                    e.currentTarget.style.opacity = '1';
+                                }
+                            }}
+                        >
+                            {node.key}
+                        </span>
+                    </span>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+export {ToolBar, StatusBar, VersionDialog, ContextMenu, Breadcrumb};

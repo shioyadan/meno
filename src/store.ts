@@ -14,6 +14,9 @@ enum ACTION {
     DIALOG_VERSION_OPEN,
     FIT_TO_CANVAS,
     CHANGE_UI_THEME,
+    SET_ROOT_NODE,
+    RESET_ROOT_NODE,
+    SET_PARENT_AS_ROOT,
     SEARCH_NODES,
     CLEAR_SEARCH,
     ACTION_END, // 末尾
@@ -32,6 +35,7 @@ enum CHANGE {
     DIALOG_VERSION_OPEN,
     FIT_TO_CANVAS,
     CHANGE_UI_THEME,
+    ROOT_NODE_CHANGED,
     SEARCH_RESULTS_CHANGED,
 };
 
@@ -42,6 +46,8 @@ class Store {
     // レンダラ
     treeMapRenderer: TreeMapRenderer;
     tree: FileNode|null = null;
+    originalTree: FileNode|null = null; // 元のツリーを保持
+    currentRootNode: FileNode|null = null; // 現在のルートノード
 
     // canvas におけるマウスポインタの位置
     pointedPath: string = "";
@@ -62,6 +68,23 @@ class Store {
         return this.loader_ ? this.loader_.fileNodeToStr(fileNode, isSizeMode) : "";
     }
 
+    // パンくずリストのパス配列を取得
+    getBreadcrumbPath(): FileNode[] {
+        if (!this.currentRootNode || !this.originalTree) {
+            return [];
+        }
+
+        const path: FileNode[] = [];
+        let current: FileNode | null = this.currentRootNode;
+        
+        while (current) {
+            path.unshift(current);
+            current = current.parent;
+        }
+
+        return path;
+    }
+
     constructor() {
         this.treeMapRenderer = new TreeMapRenderer();
         this.loader_ = new Loader();
@@ -74,6 +97,8 @@ class Store {
                 fileReader, 
                 (tree) => { // finish handler
                     this.tree = tree;
+                    this.originalTree = tree; // 元のツリーを保存
+                    this.currentRootNode = tree; // 初期状態では元のツリーがルート
                     this.trigger(CHANGE.TREE_LOADED);
                 },
                 (filePath)  => { // 読み込み状態の更新
@@ -82,6 +107,8 @@ class Store {
                 (errorMessage) => { // error handler
                     fileReader.cancel();
                     this.tree = null;
+                    this.originalTree = null;
+                    this.currentRootNode = null;
                     console.log(`error: ${errorMessage}`);
                     this.trigger(CHANGE.TREE_LOADED);
                 }
@@ -101,6 +128,31 @@ class Store {
         this.on(ACTION.CHANGE_UI_THEME, (theme: string) => {
             this.uiTheme = theme;
             this.trigger(CHANGE.CHANGE_UI_THEME);
+        });
+
+        this.on(ACTION.SET_ROOT_NODE, (nodeToSetAsRoot: FileNode) => {
+            if (nodeToSetAsRoot && nodeToSetAsRoot.children) {
+                this.currentRootNode = nodeToSetAsRoot;
+                this.tree = nodeToSetAsRoot;
+                this.treeMapRenderer.clear(); // キャッシュをクリア
+                this.trigger(CHANGE.ROOT_NODE_CHANGED);
+            }
+        });
+
+        this.on(ACTION.RESET_ROOT_NODE, () => {
+            this.currentRootNode = this.originalTree;
+            this.tree = this.originalTree;
+            this.treeMapRenderer.clear(); // キャッシュをクリア
+            this.trigger(CHANGE.ROOT_NODE_CHANGED);
+        });
+
+        this.on(ACTION.SET_PARENT_AS_ROOT, () => {
+            if (this.currentRootNode && this.currentRootNode.parent) {
+                this.currentRootNode = this.currentRootNode.parent;
+                this.tree = this.currentRootNode;
+                this.treeMapRenderer.clear(); // キャッシュをクリア
+                this.trigger(CHANGE.ROOT_NODE_CHANGED);
+            }
         });
 
         this.on(ACTION.SEARCH_NODES, (query: string) => {
