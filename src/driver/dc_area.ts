@@ -122,6 +122,9 @@ class DC_AreaDriver {
                 finalize(tree);
                 finishCallback(tree.children ? tree.children[Object.keys(tree.children)[0]] : null);
             }
+            else {
+                errorCallback("This file may not be a DC area report file.");
+            }
         });
 
         reader.load();
