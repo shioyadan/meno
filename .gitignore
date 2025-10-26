@@ -1,3 +1,5 @@
 node_modules
 dist
 work
+demo/*.log
+demo/*.html
