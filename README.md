@@ -1,17 +1,17 @@
 # Meno
 
-Meno is a tool that visualizes hierarchical data, such as the sizes of directory trees or synthesized circuit sizes. It can be built into a single, standalone HTML file.
+Meno is a tool for visualizing hierarchical data, such as directory tree sizes or synthesized circuit sizes. It can be built into a single, standalone HTML file.
 
-Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC and hierarchical power reports from PrimeTime.
+Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC, and hierarchical power reports from PrimeTime.
 
 ![demo](./demo/meno.gif)
 
 ## How to Use
 
 ### Web Version
-* Open [this link](https://shioyadan.github.io/meno/) and drag and drop your area report file.
-    * You can try the unstable version [this link](https://shioyadan.github.io/meno/unstable).
-* The following is a demo using the synthesis results of the [RSD processor](https://github.com/rsd-devel/rsd):
+* Open [this page](https://shioyadan.github.io/meno/) and drag-and-drop your area (or power) report file.
+    * You can try the unstable build [here](https://shioyadan.github.io/meno/unstable).
+* Demo using the synthesis results of the [RSD processor](https://github.com/rsd-devel/rsd):
     * [DEMO: Vivado RSD Area](https://shioyadan.github.io/meno/vivado-rsd-area.log.html)
     * [DEMO: Design Compiler RSD Area](https://shioyadan.github.io/meno/dc-rsd-area.log.html)
 
@@ -19,7 +19,7 @@ Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC an
 ### Use in Your Local Environment
 * Download and extract the pre-built files from [this link](https://github.com/shioyadan/meno/releases).
 * Drag and drop an input file onto `index.html` to visualize it.
-* You can create an HTML file with your input file embedded by passing the input file to `embed.sh`:
+* To embed your input file into a standalone HTML, use `embed.sh`:
     ```bash
     # Generate an HTML file (your_area_report.txt.html) in the same directory.
     ./embed.sh your_area_report.txt
