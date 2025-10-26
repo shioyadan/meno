@@ -9,6 +9,7 @@ production:
 	cp src/launch_httpd.sh dist/launch_httpd.sh
 	cp ./THIRD-PARTY-LICENSES.md dist/THIRD-PARTY-LICENSES.md
 	cp ./README.md dist/README.md
+	chmod 755 dist/embed.sh
 
 serve:
 	npx webpack serve --open
@@ -34,3 +35,8 @@ pack: production
 embed:
 	make production
 	sed -i.bak -e '/^__MENO_INITIAL_LOADING_DATA_PLACE_HOLDER__/{r ./work/rsd-vidado-area.txt' -e 'd}' ./dist/index.html
+
+build-demo: production
+	cd demo; unzstd *
+	./dist/embed.sh demo/dc-rsd-area.log
+	./dist/embed.sh demo/vivado-rsd-area.log

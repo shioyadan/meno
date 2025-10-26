@@ -1,0 +1,82 @@
+name: Deploy stable & unstable
+
+on:
+  push:
+    branches: [ main, stable ]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout stable branch
+        uses: actions/checkout@v4
+        with:
+          ref: stable          # stable ブランチを取得
+          path: repo-stable    # 別ディレクトリに展開
+
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main          # main ブランチを取得
+          path: repo-unstable  # 別ディレクトリに展開
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: |
+            repo-stable/package-lock.json
+            repo-unstable/package-lock.json
+
+      # --- stable（サイトのルート）をビルド ---
+      - name: Install (stable)
+        working-directory: repo-stable
+        run: npm ci
+
+      - name: Build stable
+        working-directory: repo-stable
+        run: make build-demo   # dist/ 生成を想定
+
+      # --- main（/unstable 配下）をビルド ---
+      - name: Install (unstable)
+        working-directory: repo-unstable
+        run: npm ci
+
+      - name: Build unstable
+        working-directory: repo-unstable
+        run: make build-demo   # dist/ 生成を想定
+
+      # --- Pages 用アーティファクトを合成 ---
+      - name: Compose pages artifact
+        run: |
+          mkdir -p site/unstable
+          cp -a repo-stable/dist/index.html   site/           # ルート = stable
+          cp -a repo-stable/demo/*.html   site/               # ルート = stable
+          cp -a repo-unstable/dist/index.html site/unstable/  # /unstable = main
+          cp -a repo-unstable/demo/*.html   site/unstable/    # /unstable = main
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    runs-on: ubuntu-24.04
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

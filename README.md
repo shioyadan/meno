@@ -9,10 +9,12 @@ Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC.
 ## How to Use
 
 ### Web Version
-* Open [this link](https://shioyadan.github.io/meno/demo/) and drag and drop your area report file.
+* Open [this link](https://shioyadan.github.io/meno/) and drag and drop your area report file.
+    * You can try the unstable version [this link](https://shioyadan.github.io/meno/unstable).
 * The following is a demo using the synthesis results of the [RSD processor](https://github.com/rsd-devel/rsd):
-    * [DEMO: Vivado RSD Area](https://shioyadan.github.io/meno/demo/vivdao-rsd-lut.html)
-    * [DEMO: Design Compiler RSD Area](https://shioyadan.github.io/meno/demo/dc-rsd-area.html)
+    * [DEMO: Vivado RSD Area](https://shioyadan.github.io/meno/vivado-rsd-area.log.html)
+    * [DEMO: Design Compiler RSD Area](https://shioyadan.github.io/meno/dc-rsd-area.log.html)
+
 
 ### Use in Your Local Environment
 * Download and extract the pre-built files from [this link](https://github.com/shioyadan/meno/releases).
@@ -22,7 +24,7 @@ Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC.
     # Generate an HTML file (your_area_report.txt.html) in the same directory.
     ./embed.sh your_area_report.txt
 
-    # Launch an WEB server, which is useful to view the output HTML from a remote client. 
+    # Launch a web server, which is useful to view the output HTML from a remote client. 
     ./launch_httpd.sh
     ```
 
@@ -56,6 +58,6 @@ make docker-run
 
 ## License
 
-Copyright (C) 2016-2024 Ryota Shioya <shioya@ci.i.u-tokyo.ac.jp>
+Copyright (C) 2016-2025 Ryota Shioya <shioya@ci.i.u-tokyo.ac.jp>
 
 This application is released under the 3-Clause BSD License, see LICENSE.md. This application bundles third-party packages in accordance with the licenses presented in THIRD-PARTY-LICENSES.md.
