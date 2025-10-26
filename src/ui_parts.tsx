@@ -146,26 +146,19 @@ const ToolBar = (props: {store: Store;}) => {
                 <div style={{ padding: "8px" }}>
                     <InputGroup size="sm" style={{ width: "300px" }}>
                         <FormControl
+                            className={`search-input ${theme === "dark" ? "dark" : "light"}`}
                             ref={searchInputRef}
                             placeholder="Search nodes... (Press '/' to focus)"
                             value={searchQuery}
                             onChange={handleSearchInputChange}
                             onKeyDown={handleSearchKeyDown}
-                            style={{
-                                backgroundColor: theme === "dark" ? "#3e4651" : "#ffffff",
-                                color: theme === "dark" ? "#ffffff" : "#000000",
-                                border: `1px solid ${theme === "dark" ? "#5a6169" : "#ced4da"}`
-                            }}
                         />
                         {searchQuery && (
                             <Button 
                                 variant="outline-secondary" 
                                 size="sm"
                                 onClick={handleSearchClear}
-                                style={{
-                                    borderColor: theme === "dark" ? "#5a6169" : "#ced4da",
-                                    color: theme === "dark" ? "#ffffff" : "#6c757d"
-                                }}
+                                className={`search-clear ${theme === "dark" ? "is-dark" : "is-light"}`}
                             >
                                 <i className="bi bi-x"></i>
                             </Button>

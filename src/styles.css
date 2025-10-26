@@ -26,3 +26,47 @@ html, body, #root {
 .nav-link.tool-bar-link i {
     margin-right: 2px; /* アイコンと文字の間の余白 */
 }
+
+/* 検索ボックス */
+.navbar .search-input.dark::placeholder {
+    color: #cfd6df;   /* 明るめに */
+    opacity: 1;
+}
+.navbar .search-input.light::placeholder {
+    color: #6c757d;
+    opacity: 1;
+}
+.navbar .search-input.dark {
+    background-color: #3e4651;
+    color: #ffffff;
+    border: 1px solid #5a6169;
+}
+.navbar .search-input.light {
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #ced4da;
+}
+
+.navbar .search-clear.dark {
+    border-color: #5a6169;
+    color: #ffffff;          /* アイコンは currentColor を継承 */
+    background-color: transparent;
+}
+.navbar .search-clear.dark:hover,
+.navbar .search-clear.dark:focus {
+    border-color: #6b737c;   /* ほんの少しだけ明るく */
+    color: #ffffff;
+    background-color: transparent;
+}
+
+.navbar .search-clear.light {
+    border-color: #ced4da;
+    color: #6c757d;
+    background-color: transparent;
+}
+.navbar .search-clear.light:hover,
+.navbar .search-clear.light:focus {
+    border-color: #bfc6cf;
+    color: #6c757d;
+    background-color: transparent;
+}
