@@ -103,7 +103,8 @@ const ToolBar = (props: {store: Store;}) => {
     }, []);
 
     return (
-        <Navbar expand={true} 
+        <Navbar 
+            expand={true} 
             variant="dark" // ここは dark のままの方がいいかも
             style={{ backgroundColor: theme == "dark" ? "#272a31": "#3E455E"}}
         >
@@ -143,7 +144,7 @@ const ToolBar = (props: {store: Store;}) => {
             
             {/* 検索ボックス */}
             <Nav className="ms-auto">
-                <div style={{ padding: "8px" }}>
+                <div style={{ paddingRight: "8px" }}>
                     <InputGroup size="sm" style={{ width: "250px" }}>
                         <FormControl
                             className={`search-input ${theme === "dark" ? "dark" : "light"}`}
