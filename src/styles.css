@@ -28,23 +28,24 @@ html, body, #root {
 }
 
 /* 検索ボックス */
+/* プレースホルダ */
 .navbar .search-input.dark::placeholder {
-    color: #cfd6df;   /* 明るめに */
+    color: #909192;   /* 明るめに */
     opacity: 1;
 }
 .navbar .search-input.light::placeholder {
-    color: #6c757d;
+    color: #909192;
     opacity: 1;
 }
 .navbar .search-input.dark {
-    background-color: #3e4651;
+    background-color: #2e3641;
     color: #ffffff;
-    border: 1px solid #5a6169;
+    border: 0.5px solid #4a5159;
 }
 .navbar .search-input.light {
-    background-color: #ffffff;
-    color: #000000;
-    border: 1px solid #ced4da;
+    background-color: #4A516A;
+    color: #ffffff;
+    border: 0.5px solid #5E657E;
 }
 
 .navbar .search-clear.dark {

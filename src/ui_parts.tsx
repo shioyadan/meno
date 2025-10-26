@@ -144,7 +144,7 @@ const ToolBar = (props: {store: Store;}) => {
             {/* 検索ボックス */}
             <Nav className="ms-auto">
                 <div style={{ padding: "8px" }}>
-                    <InputGroup size="sm" style={{ width: "300px" }}>
+                    <InputGroup size="sm" style={{ width: "250px" }}>
                         <FormControl
                             className={`search-input ${theme === "dark" ? "dark" : "light"}`}
                             ref={searchInputRef}
