@@ -2,9 +2,9 @@
 
 Meno is a tool that visualizes hierarchical data, such as the sizes of directory trees or synthesized circuit sizes. It can be built into a single, standalone HTML file.
 
-Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC.
+Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC and hierarchical power reports from PrimeTime.
 
-![demo](https://shioyadan.github.io/meno/demo/meno.gif)
+![demo](./demo/meno.gif)
 
 ## How to Use
 
