@@ -3,8 +3,9 @@ import DC_AreaDriver from "./driver/dc_area";
 import VivadoAreaDriver from "./driver/vivado_area";
 import GenusAreaFlatpathDriver from "./driver/genus_area_flatpath";
 import GenusAreaHierpathDriver from "./driver/genus_area_hierpath";
+import PrimeTimePowerDriver from "./driver/prime_time_power";
 
-let driverList = [FileInfoDriver, DC_AreaDriver, VivadoAreaDriver, GenusAreaFlatpathDriver, GenusAreaHierpathDriver];
+let driverList = [FileInfoDriver, DC_AreaDriver, VivadoAreaDriver, GenusAreaFlatpathDriver, GenusAreaHierpathDriver, PrimeTimePowerDriver];
 
 
 import { FileReader, FileNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver/driver";
