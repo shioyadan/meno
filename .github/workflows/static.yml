@@ -23,10 +23,10 @@ jobs:
           ref: stable          # stable ブランチを取得
           path: repo-stable    # 別ディレクトリに展開
 
-      - name: Checkout master branch
+      - name: Checkout main branch
         uses: actions/checkout@v4
         with:
-          ref: master          # master ブランチを取得
+          ref: main          # main ブランチを取得
           path: repo-unstable  # 別ディレクトリに展開
 
       - name: Setup Node.js
@@ -47,7 +47,7 @@ jobs:
         working-directory: repo-stable
         run: make build-demo   # dist/ 生成を想定
 
-      # --- master（/unstable 配下）をビルド ---
+      # --- main（/unstable 配下）をビルド ---
       - name: Install (unstable)
         working-directory: repo-unstable
         run: npm ci
