@@ -431,12 +431,12 @@ const Breadcrumb = (props: {store: Store;}) => {
                 position: 'absolute',
                 top: '10px',
                 left: '10px',
-                zIndex: 1000,
-                backgroundColor: theme === "dark" ? "rgba(52, 58, 64, 0.9)" : "rgba(255, 255, 255, 0.9)",
-                border: `1px solid ${theme === "dark" ? "#495057" : "#dee2e6"}`,
-                borderRadius: '6px',
-                padding: '8px 12px',
-                fontSize: '14px',
+                zIndex: 10,
+                backgroundColor: theme === "dark" ? "#2e3641" : "#e0e0e0",
+                border: `0.5px solid ${theme === "dark" ? "#495057" : "#dee2e6"}`,
+                borderRadius: '3px',
+                padding: '6px 6px',
+                fontSize: '12px',
                 fontFamily: 'monospace',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                 backdropFilter: 'blur(4px)',
@@ -445,10 +445,6 @@ const Breadcrumb = (props: {store: Store;}) => {
             }}
         >
             <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-                <i className="bi bi-house-fill" style={{ 
-                    marginRight: '8px', 
-                    color: theme === "dark" ? "#ffc107" : "#856404" 
-                }}></i>
                 {breadcrumbPath.map((node, index) => (
                     <span key={index} style={{ display: 'flex', alignItems: 'center' }}>
                         {index > 0 && (
@@ -463,8 +459,8 @@ const Breadcrumb = (props: {store: Store;}) => {
                             style={{
                                 cursor: index < breadcrumbPath.length - 1 ? 'pointer' : 'default',
                                 color: index === breadcrumbPath.length - 1 
-                                    ? (theme === "dark" ? "#ffffff" : "#000000")
-                                    : (theme === "dark" ? "#17a2b8" : "#007bff"),
+                                    ? (theme === "dark" ? "#909192" : "#000000")
+                                    : (theme === "dark" ? "#17a2b8" : "#507bdf"),
                                 fontWeight: index === breadcrumbPath.length - 1 ? 'bold' : 'normal',
                                 textDecoration: index < breadcrumbPath.length - 1 ? 'underline' : 'none',
                                 maxWidth: '120px',
