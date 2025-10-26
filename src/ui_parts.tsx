@@ -163,16 +163,6 @@ const ToolBar = (props: {store: Store;}) => {
                                 <i className="bi bi-x"></i>
                             </Button>
                         )}
-                        <Button 
-                            variant="outline-secondary" 
-                            size="sm"
-                            style={{
-                                borderColor: theme === "dark" ? "#5a6169" : "#ced4da",
-                                color: theme === "dark" ? "#ffffff" : "#6c757d"
-                            }}
-                        >
-                            <i className="bi bi-search"></i>
-                        </Button>
                     </InputGroup>
                 </div>
             </Nav>
