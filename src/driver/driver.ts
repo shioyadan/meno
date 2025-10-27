@@ -73,11 +73,11 @@ const fileNodeToStr = (fileNode: FileNode, isSizeMode: boolean, unit: string = "
     let str = "";
     const num = fileNode.size;
     if (num > 1000 * 1000 * 1000) {
-        str = Math.ceil(num / 1000 / 1000 / 1000) + "G";
+        str = (num / 1000 / 1000 / 1000).toFixed(2) + "G";
     } else if (num > 1000 * 1000) {
-        str = Math.ceil(num / 1000 / 1000) + "M";
+        str = (num / 1000 / 1000).toFixed(2) + "M";
     } else if (num > 1000) {
-        str = Math.ceil(num / 1000) + "K";
+        str = (num / 1000).toFixed(2) + "K";
     } else {
         str = "" + num;
     }
