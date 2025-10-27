@@ -230,7 +230,6 @@ const ToolBar = (props: {store: Store;}) => {
 const StatusBar = (props: {store: Store;}) => {
     let store = props.store;
     const [statusBarMessage, setStatusBarMessage] = useState("");
-    const [currentRootPath, setCurrentRootPath] = useState("");
     const [searchResultsCount, setSearchResultsCount] = useState(0);
     const [searchQuery, setSearchQuery] = useState("");
     const [theme, setTheme] = useState(store.uiTheme); // 現在のテーマを管理
@@ -261,20 +260,7 @@ const StatusBar = (props: {store: Store;}) => {
         store.on(CHANGE.CHANGE_UI_THEME, () => {
             setTheme(store.uiTheme);
         });
-        store.on(CHANGE.ROOT_NODE_CHANGED, () => {
-            if (store.currentRootNode === store.originalTree) {
-                setCurrentRootPath("");
-            } else if (store.currentRootNode) {
-                // ルートノードまでのパスを構築
-                let path = store.currentRootNode.key;
-                let parent = store.currentRootNode.parent;
-                while (parent) {
-                    path = parent.key + "/" + path;
-                    parent = parent.parent;
-                }
-                setCurrentRootPath(path);
-            }
-            // ルートノードサイズを更新
+        store.on(CHANGE.ROOT_NODE_CHANGED, () => {  // ルートノードサイズを更新
             setRootSize((store.currentRootNode && store.currentRootNode.size) ? store.currentRootNode.size : 0);
         });
         store.on(CHANGE.TREE_LOADED, () => {
@@ -283,7 +269,7 @@ const StatusBar = (props: {store: Store;}) => {
         store.on(CHANGE.SEARCH_RESULTS_CHANGED, () => {
             setSearchResultsCount(store.searchResults.length);
             setSearchQuery(store.searchQuery);
-            // ▼ 親子重複を除外した合計（素の値のまま）
+            // 親子重複を除外した合計（素の値のまま）
             const total = calcDedupedTotalSize(store.searchResults || []);
             setSearchTotalSize(total);
         });
@@ -317,15 +303,6 @@ const StatusBar = (props: {store: Store;}) => {
             <span style={{ color: theme == "dark" ? "#C9CACB" : "#191919", fontSize: "15px" }}>
                 {statusBarMessage}{getSearchMessage()}
             </span>
-            {currentRootPath && (
-                <span style={{ 
-                    color: theme == "dark" ? "#ffc107" : "#856404", 
-                    fontSize: "13px",
-                    fontStyle: "italic"
-                }}>
-                    Root: /{currentRootPath}
-                </span>
-            )}
         </div>
     );
 };
