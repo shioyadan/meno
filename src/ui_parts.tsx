@@ -419,7 +419,7 @@ const Breadcrumb = (props: {store: Store;}) => {
         }
     };
 
-    if (breadcrumbPath.length <= 1) {
+    if (breadcrumbPath.length <= 2) {
         return null; // ルートレベルでは表示しない
     }
 
