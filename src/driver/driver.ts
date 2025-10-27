@@ -62,6 +62,35 @@ class FileReader {
     }
 }
 
+const fileNodeToStr = (fileNode: FileNode, isSizeMode: boolean, unit: string = "") => {
+    // ルートノードを取得
+    const getRoot = (n: FileNode) => {
+        let cur = n;
+        while (cur.parent && cur.parent.id !== -1) cur = cur.parent;
+        return cur;
+    };
+
+    let str = "";
+    const num = fileNode.size;
+    if (num > 1000 * 1000 * 1000) {
+        str = Math.ceil(num / 1000 / 1000 / 1000) + "G";
+    } else if (num > 1000 * 1000) {
+        str = Math.ceil(num / 1000 / 1000) + "M";
+    } else if (num > 1000) {
+        str = Math.ceil(num / 1000) + "K";
+    } else {
+        str = "" + num;
+    }
+
+    const root = getRoot(fileNode);
+    const rootSize = root.size;
+    const percentage =
+        rootSize > 0 ? ((fileNode.size / rootSize) * 100).toFixed(2) : "0.00";
+
+    return ` [${str} unit, ${percentage}%]`;
+}
+
+
 export { FileReader, FileNode, FinishCallback, 
-    ProgressCallback, ErrorCallback, CloseHandler, ReadLineHandler};
+    ProgressCallback, ErrorCallback, CloseHandler, ReadLineHandler, fileNodeToStr };
 

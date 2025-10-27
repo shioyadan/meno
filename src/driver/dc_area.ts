@@ -1,4 +1,4 @@
-import { FileReader, FileNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver";
+import { FileReader, FileNode, FinishCallback, ProgressCallback, ErrorCallback, fileNodeToStr } from "./driver";
 
 class DC_AreaDriver {
 
@@ -131,21 +131,7 @@ class DC_AreaDriver {
     }
 
     fileNodeToStr(fileNode: FileNode, isSizeMode: boolean) {
-        let str = "";
-        let num = fileNode.size;
-        if (num > 1000*1000*1000) {
-            str = "" + Math.ceil(num/1000/1000/1000) + "G";
-        }
-        else if (num > 1000*1000) {
-            str = "" + Math.ceil(num/1000/1000) + "M";
-        }
-        else if (num > 1000) {
-            str = "" + Math.ceil(num/1000) + "K";
-        }
-        else {
-            str = "" + num;
-        }
-        return " [" + str + "]";
+        return fileNodeToStr(fileNode, isSizeMode);
     }
 };
 
