@@ -170,6 +170,12 @@
 │  ├─ repository: https://github.com/facebook/react
 │  ├─ path: node_modules/react-dom
 │  └─ licenseFile: node_modules/react-dom/LICENSE
+├─ react-icons@5.5.0
+│  ├─ licenses: MIT
+│  ├─ repository: https://github.com/react-icons/react-icons
+│  ├─ publisher: Goran Gajic
+│  ├─ path: node_modules/react-icons
+│  └─ licenseFile: node_modules/react-icons/LICENSE
 ├─ react-is@16.13.1
 │  ├─ licenses: MIT
 │  ├─ repository: https://github.com/facebook/react

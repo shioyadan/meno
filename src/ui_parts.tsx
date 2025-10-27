@@ -7,6 +7,20 @@ import { fileOpen } from "browser-fs-access";
 import { Nav, Navbar, NavDropdown, Form, FormControl, InputGroup, Button, Dropdown } from "react-bootstrap";
 import { Modal } from "react-bootstrap";
 
+// react-icons 経由でアイコンをインポートすると，webpack でのビルド時に必要なアイコンのみがバンドルされる
+import {
+    BsList,
+    BsX,
+    BsArrowsFullscreen,
+    BsZoomIn,
+    BsZoomOut,
+    BsArrowUpRightCircle,
+    BsArrowUp,
+    BsHouse,
+    BsChevronRight,
+    BsCheck
+} from 'react-icons/bs';
+
 const ToolBar = (props: {store: Store;}) => {
     let store = props.store;
     const [searchQuery, setSearchQuery] = useState("");
@@ -132,29 +146,29 @@ const ToolBar = (props: {store: Store;}) => {
 
     const renderMenuDropdown = () => (
         <Nav onSelect={dispatch} activeKey={selectedKey}>
-            <NavDropdown menuVariant={theme} title={<i className="bi bi-list"></i>} id="collapsible-nav-dropdown">
+            <NavDropdown menuVariant={theme} title={<BsList />} id="collapsible-nav-dropdown">
                 <NavDropdown.Item eventKey="import">
                     Import file
                 </NavDropdown.Item>
                 <NavDropdown.Divider />
                 <NavDropdown.Item eventKey="set-dark" active={theme === "dark"}>
-                    {theme === "dark" && <i className="bi bi-check"></i>} Dark
+                    {theme === "dark" && <BsCheck />} Dark
                 </NavDropdown.Item>
                 <NavDropdown.Item eventKey="set-light" active={theme === "light"}>
-                    {theme === "light" && <i className="bi bi-check"></i>} Light
+                    {theme === "light" && <BsCheck />} Light
                 </NavDropdown.Item>
                 <NavDropdown.Divider />
                 {/* コンパクト時はズーム関連もドロップダウンに格納 */}
                 {isCompact && (
                     <>
                         <NavDropdown.Item eventKey="zoom-in">
-                            <i className="bi bi-zoom-in"></i> Zoom In
+                            <BsZoomIn /> Zoom In
                         </NavDropdown.Item>
                         <NavDropdown.Item eventKey="zoom-out">
-                            <i className="bi bi-zoom-out"></i> Zoom Out
+                            <BsZoomOut /> Zoom Out
                         </NavDropdown.Item>
                         <NavDropdown.Item eventKey="fit">
-                            <i className="bi bi-arrows-fullscreen"></i> Fit
+                            <BsArrowsFullscreen /> Fit
                         </NavDropdown.Item>
                         <NavDropdown.Divider />
                     </>
@@ -171,13 +185,13 @@ const ToolBar = (props: {store: Store;}) => {
             style={{ color: theme == "dark" ? "#C9CACB" : "#ffffff" }} className="me-auto" // このクラスでリンクが左側に配置される
         >
             <Nav.Link className="nav-link tool-bar-link" eventKey="zoom-in">
-                <i className="bi bi-zoom-in"></i> Zoom In                
+                <BsZoomIn /> Zoom In                
             </Nav.Link>
             <Nav.Link className="nav-link tool-bar-link" eventKey="zoom-out">
-                <i className="bi bi-zoom-out"></i> Zoom Out                
+                <BsZoomOut /> Zoom Out                
             </Nav.Link>
             <Nav.Link className="nav-link tool-bar-link" eventKey="fit">
-                <i className="bi bi-arrows-fullscreen"></i> Fit
+                <BsArrowsFullscreen /> Fit
             </Nav.Link>
         </Nav>
     );
@@ -202,7 +216,7 @@ const ToolBar = (props: {store: Store;}) => {
                             onClick={handleSearchClear}
                             className={`search-clear ${theme === "dark" ? "is-dark" : "is-light"}`}
                         >
-                            <i className="bi bi-x"></i>
+                            <BsX />
                         </Button>
                     )}
                 </InputGroup>
@@ -380,7 +394,7 @@ const ContextMenu = (props: {
                 
                 {canSetAsRoot && (
                     <div onClick={handleSetAsRoot} className="context-menu__item">
-                        <i className="bi bi-arrow-up-right-circle"></i> Set as Root
+                        <BsArrowUpRightCircle /> Set as Root
                     </div>
                 )}
                 <div
@@ -389,11 +403,11 @@ const ContextMenu = (props: {
                     aria-disabled={isAtOriginalRoot || !hasParent}
                     style={isAtOriginalRoot || !hasParent ? { opacity: 0.5, pointerEvents: 'none' } : undefined}
                 >
-                    <i className="bi bi-arrow-up"></i> Go Up One Level
+                    <BsArrowUp /> Go Up One Level
                 </div>
                 {isNotOriginalRoot && (
                     <div onClick={handleResetRoot} className="context-menu__item">
-                        <i className="bi bi-house"></i> Reset to Original Root
+                        <BsHouse /> Reset to Original Root
                     </div>
                 )}
             </div>
@@ -436,7 +450,7 @@ const Breadcrumb = (props: {store: Store;}) => {
                 {breadcrumbPath.map((node, index) => (
                     <span key={index} className="breadcrumb-item">
                         {index > 0 && (
-                            <i className="bi bi-chevron-right breadcrumb-sep"></i>
+                            <BsChevronRight className="breadcrumb-sep" />
                         )}
                         <span
                             onClick={() => handleBreadcrumbClick(node)}

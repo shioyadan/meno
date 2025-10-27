@@ -9,7 +9,9 @@ import { createRoot } from "react-dom/client";
 // WEBPACK のローダーにより CSS ファイルを動的に読み込む JS に変換される
 import "./styles.css";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap-icons/font/bootstrap-icons.css';
+
+// react-icons 経由でアイコンをインポートすると，webpack でのビルド時に必要なアイコンのみがバンドルされるため，ここではアイコンを読まない
+// import 'bootstrap-icons/font/bootstrap-icons.css';
 
 // App コンポーネント
 import App from "./app";    
