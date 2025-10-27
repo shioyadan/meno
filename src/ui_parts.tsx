@@ -234,6 +234,24 @@ const StatusBar = (props: {store: Store;}) => {
     const [searchResultsCount, setSearchResultsCount] = useState(0);
     const [searchQuery, setSearchQuery] = useState("");
     const [theme, setTheme] = useState(store.uiTheme); // 現在のテーマを管理
+    const [searchTotalSize, setSearchTotalSize] = useState(0);
+    const [rootSize, setRootSize] = useState(0);
+
+    // 重複排除して合計を出す
+    const calcDedupedTotalSize = (results: FileNode[] = []) => {
+        if (!results.length) return 0;
+        const idSet = new Set<number>(results.map(n => n?.id));
+        // 祖先がヒットしていない最上位ノードのみを残す
+        const topLevel = results.filter(n => {
+            let p = n?.parent;
+            while (p) {
+                if (idSet.has(p.id)) return false; // 親(祖先)がヒットしている → 除外
+                p = p.parent;
+            }
+            return true;
+        });
+        return topLevel.reduce((acc, n) => acc + (n?.size || 0), 0);
+    };
 
     useEffect(() => { // マウント時
         store.on(CHANGE.CANVAS_POINTER_CHANGED, () => {
@@ -256,17 +274,32 @@ const StatusBar = (props: {store: Store;}) => {
                 }
                 setCurrentRootPath(path);
             }
+            // ルートノードサイズを更新
+            setRootSize((store.currentRootNode && store.currentRootNode.size) ? store.currentRootNode.size : 0);
+        });
+        store.on(CHANGE.TREE_LOADED, () => {
+            setRootSize((store.currentRootNode && store.currentRootNode.size) ? store.currentRootNode.size : 0);
         });
         store.on(CHANGE.SEARCH_RESULTS_CHANGED, () => {
             setSearchResultsCount(store.searchResults.length);
             setSearchQuery(store.searchQuery);
+            // ▼ 親子重複を除外した合計（素の値のまま）
+            const total = calcDedupedTotalSize(store.searchResults || []);
+            setSearchTotalSize(total);
         });
+        setRootSize((store.currentRootNode && store.currentRootNode.size) ? store.currentRootNode.size : 0);
     }, []);
+
+    const toPercent = (part: number, whole: number): string => {
+        if (!whole || whole <= 0) return "0%";
+        const pct = (part / whole) * 100;
+        return pct >= 100 || Number.isInteger(pct) ? `${Math.round(pct*100)/100}%` : `${pct.toFixed(1)}%`;
+    };
 
     const getSearchMessage = () => {
         if (!searchQuery) return "";
         if (searchResultsCount === 0) return ` | Search: "${searchQuery}" - No results found`;
-        return ` | Search: "${searchQuery}" - ${searchResultsCount} result${searchResultsCount > 1 ? 's' : ''} found`;
+        return ` | Search: "${searchQuery}" - ${searchResultsCount} result${searchResultsCount > 1 ? 's' : ''} found (Total: ${searchTotalSize}, ${toPercent(searchTotalSize, rootSize)} of root)`;
     };
 
     return (
