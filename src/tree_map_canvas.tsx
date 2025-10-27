@@ -1,21 +1,22 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect } from "react";
 import Store, { ACTION, CHANGE } from "./store";
+import { FileNode } from "./loader";
 
 class TreeMapCanvasContext {
-    BASE_SIZE = [0, 0];
-    tree = null;
+    BASE_SIZE: [number, number] = [0, 0];
+    tree: FileNode|null = null;
     isSizeMode = true;
     zoomLevel = 0;
-    viewPoint = [0, 0];
-    curSize = [0, 0];
-    oldSize = [0, 0];
+    viewPoint: [number, number] = [0, 0];
+    curSize: [number, number] = [0, 0];
+    oldSize: [number, number] = [0, 0];
     
     inZoomAnimation = false;
     zoomAnimationDirection = true;
     zoomEndLevel = 0;
-    zoomBasePoint = [0, 0];
+    zoomBasePoint: [number, number] = [0, 0];
     inDrag = false;
-    prevMousePoint = [0, 0];
+    prevMousePoint: [number, number] = [0, 0];
 
     // タッチ関係
     inPinch = false;
@@ -33,12 +34,15 @@ class TreeMapCanvasContext {
 };
 
 
-const TreeMapCanvas = (props: {store: Store; onContextMenu?: (x: number, y: number, targetNode: any) => void;}) => {
+const TreeMapCanvas = (props: {
+    store: Store;
+    onContextMenu?: (x: number, y: number, targetNode: FileNode) => void;
+}) => {
     const store = props.store;
     const contextRef = useRef(new TreeMapCanvasContext);
     const ctx = contextRef.current; // 再レンダリングのたびにクロージャーが作られるので，参照をここでとっても問題がない
 
-    const divRef = useRef(null); // div の DOM
+    const divRef = useRef<HTMLDivElement|null>(null); // div の DOM
     const canvasRef = useRef<HTMLCanvasElement>(null); // canvas の DOM
 
     useEffect(() => {   
@@ -47,20 +51,20 @@ const TreeMapCanvas = (props: {store: Store; onContextMenu?: (x: number, y: numb
     }, []);
 
     const initialize = () => {   // マウント時
-        const canvas: HTMLCanvasElement = canvasRef.current!;  // canvas の DOM
+        const canvas = canvasRef.current!;  // canvas の DOM
 
         canvas.ondblclick = handleMouseDoubleClick;
-        canvas.addEventListener("wheel", handleMouseWheel);
+        canvas.addEventListener("wheel", handleMouseWheel as EventListener);
         canvas.onmousemove = handleMouseMove;
         canvas.onmousedown = handleMouseDown;
         canvas.onmouseup = handleMouseUp;
         canvas.oncontextmenu = handleContextMenu;
 
-        canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
-        canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
-        canvas.addEventListener("touchend", handleTouchEnd, { passive: false });
+        canvas.addEventListener("touchstart", handleTouchStart as EventListener, { passive: false });
+        canvas.addEventListener("touchmove", handleTouchMove as EventListener, { passive: false });
+        canvas.addEventListener("touchend", handleTouchEnd as EventListener, { passive: false });
         
-        document.onkeydown = handleKeydown
+        document.onkeydown = handleKeydown;
 
         store.on(CHANGE.CANVAS_ZOOM_IN, () => {
             startZoomInOrOut(true, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
@@ -80,7 +84,7 @@ const TreeMapCanvas = (props: {store: Store; onContextMenu?: (x: number, y: numb
         store.on(CHANGE.SEARCH_RESULTS_CHANGED, draw);
 
         // リサイズ時のリスナー
-        const observer = new ResizeObserver((entries) => {
+        const observer = new ResizeObserver((_entries) => {
             // handleResize 内で DOM をいじる必要があるが，ResizeObserver がそれを許さないので非同期で遅延実行
             setTimeout(handleResize, 0); 
         });
@@ -129,7 +133,7 @@ const TreeMapCanvas = (props: {store: Store; onContextMenu?: (x: number, y: numb
     const handleMouseMove = (e: MouseEvent) => {
         if (!store.tree) return;
         if (ctx.inDrag) {
-            const newViewPoint = [
+            const newViewPoint: [number, number] = [
                 ctx.viewPoint[0] + ctx.prevMousePoint[0] - e.offsetX,
                 ctx.viewPoint[1] + ctx.prevMousePoint[1] - e.offsetY,
             ];
@@ -140,7 +144,7 @@ const TreeMapCanvas = (props: {store: Store; onContextMenu?: (x: number, y: numb
         let pointedFileNode = 
             store.treeMapRenderer.getFileNodeFromPoint([e.offsetX, e.offsetY]);
         let pointedPath = 
-            store.treeMapRenderer.getPathFromFileNode(pointedFileNode);
+            store.treeMapRenderer.getPathFromFileNode(pointedFileNode!);
         //console.log(self.pointedPath);
         store.trigger(ACTION.CANVAS_POINTER_CHANGE, pointedPath, pointedFileNode);
 
@@ -154,7 +158,7 @@ const TreeMapCanvas = (props: {store: Store; onContextMenu?: (x: number, y: numb
         }
     };
 
-    const handleMouseUp = (e: MouseEvent) => {
+    const handleMouseUp = (_e: MouseEvent) => {
         ctx.inDrag = false;
     };
 
@@ -231,8 +235,8 @@ const TreeMapCanvas = (props: {store: Store; onContextMenu?: (x: number, y: numb
     }
 
     const handleKeydown = (e: KeyboardEvent) => {
-        const canvas: any = canvasRef.current;
-        if (!store.tree) return;
+        const canvas = canvasRef.current as HTMLCanvasElement | null;
+        if (!store.tree || !canvas) return;
         let key = e.key;
         if (key === "ArrowUp") {
             if (e.ctrlKey) {
@@ -270,8 +274,9 @@ const TreeMapCanvas = (props: {store: Store; onContextMenu?: (x: number, y: numb
 
     const handleResize = () => {
 
-        const canvas: any = canvasRef.current;
+        const canvas = canvasRef.current as HTMLCanvasElement | null;
         // const div: any = divRef.current;
+        if (!canvas) return;
         let width = canvas.clientWidth;
         let height = canvas.clientHeight;
 
@@ -289,7 +294,9 @@ const TreeMapCanvas = (props: {store: Store; onContextMenu?: (x: number, y: numb
             let ratio = devicePixelRatio;
             canvas.width = width * ratio;
             canvas.height = height * ratio;
-            canvasCtx.scale(ratio, ratio);
+            if (canvasCtx) {
+                canvasCtx.scale(ratio, ratio);
+            }
             ctx.oldSize[0] = width;
             ctx.oldSize[1] = height;
             draw();
@@ -337,7 +344,8 @@ const TreeMapCanvas = (props: {store: Store; onContextMenu?: (x: number, y: numb
     };
 
     const draw = () => {
-        const canvas: any = canvasRef.current;  // DOM
+        const canvas = canvasRef.current as HTMLCanvasElement | null;  // DOM
+        if (!canvas) return;
         const width = canvas.width;
         const height = canvas.height;
         const zoom = calcZoomRatio(ctx.zoomLevel);
@@ -359,7 +367,8 @@ const TreeMapCanvas = (props: {store: Store; onContextMenu?: (x: number, y: numb
     };
     
     const fitToCanvas = () => {
-        const canvas: any = canvasRef.current;  // DOM
+        const canvas = canvasRef.current as HTMLCanvasElement | null;  // DOM
+        if (!canvas) return;
         let targetScale = Math.min(
             canvas.offsetWidth / ctx.BASE_SIZE[0],
             canvas.offsetHeight / ctx.BASE_SIZE[1]

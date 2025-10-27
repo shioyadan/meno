@@ -3,6 +3,12 @@
 //
 import {FileNode} from "./loader";
 
+export type Point = [number, number];
+export type Rect = [number, number, number, number];
+export type Margin = Rect;
+export type ViewPort = Rect;
+export type AreasMap = Record<string, Rect>;
+
 class DivNode {
     fileNode: FileNode|null = null;
     children: DivNode[]|null = [];
@@ -14,12 +20,19 @@ class DivNode {
 }
 
 class TreeMapCacheEntry {
-    rect: number[];
-    areas: any;
-    constructor(rect: number[], areas: any) {
+    rect: Rect;
+    areas: AreasMap|null;
+    constructor(rect: Rect, areas: AreasMap|null) {
         this.rect = rect;
         this.areas = areas;
     }
+}
+
+export interface AreaEntry {
+    key: string;
+    rect: Rect;
+    level: number;
+    fileNode: FileNode|null;
 }
 
 class TreeMap {
@@ -27,7 +40,7 @@ class TreeMap {
     cachedSizeMode = true; // size で描画するかどうか
     /** @type {} */
     treeMapCache_: Record<string,TreeMapCacheEntry> = {}; // ファイルパスから分割情報へのキャッシュ
-    areas_: any = null; // 生成済み領域情報
+    areas_: AreaEntry[]|null = null; // 生成済み領域情報
     root_: FileNode|null = null;
     
     constructor() {
@@ -49,8 +62,8 @@ class TreeMap {
     // ファイルノードからパスを得る
     getPathFromFileNode(fileNode: FileNode){
         // file tree からパスを生成
-        let path = fileNode?.key;
-        let f = fileNode?.parent;
+        let path: string|null = fileNode?.key ?? null;
+        let f = fileNode?.parent ?? null;
         while (f) {
             path = f.key + "/" + path;
             f = f.parent;
@@ -81,7 +94,7 @@ class TreeMap {
         }
 
         if (!path) {
-            return null;
+            return null as TreeMapCacheEntry|null;
         }
 
         let cache = self.treeMapCache_[path];
@@ -93,7 +106,7 @@ class TreeMap {
             let divTree = self.makeDivTree(fileNode);
 
             // 分割木を元に分割領域を生成
-            let areas: Record<string, number[]> = {};
+            let areas: AreasMap = {};
             let baseRect = cache.rect;
             self.divideRects(divTree, areas, baseRect);
 
@@ -102,10 +115,12 @@ class TreeMap {
                 for (let key in areas) {
                     let childPath = self.getPathFromFileNode(fileNode.children[key]); 
                     let r = areas[key];
-                    self.treeMapCache_[childPath] = new TreeMapCacheEntry(
-                        [0, 0, r[2] - r[0], r[3] - r[1]],
-                        null
-                    );
+                    if (childPath) {
+                        self.treeMapCache_[childPath] = new TreeMapCacheEntry(
+                            [0, 0, r[2] - r[0], r[3] - r[1]],
+                            null
+                        );
+                    }
                 }
             }
 
@@ -129,10 +144,7 @@ class TreeMap {
     // が小さくなる･･･ と思う
     makeDivTree(fileNode: FileNode) {
 
-        let fileChildren = fileNode.children;
-        if (!fileChildren) {
-            fileChildren = {};
-        }
+        let fileChildren: Record<string, FileNode> = fileNode.children ?? {};
         let keys = Object.keys(fileChildren);
 
         // 空ディレクトリ or 容量0のファイルははずしておかないと無限ループする
@@ -168,8 +180,8 @@ class TreeMap {
                 return;
             }
 
-            let left = [];
-            let right = [];
+            let left: string[] = [];
+            let right: string[] = [];
             let leftSize = 0;
             let rightSize = 0;
 
@@ -205,7 +217,7 @@ class TreeMap {
     // divNode: バイナリツリーのノード
     // divided: 分割結果の矩形のハッシュ（ファイル名 -> 矩形）
     // rect: 分割対象の矩形．これを divNode に従い再帰的に分割
-    divideRects(divNode: DivNode, divided: Record<string,number[]>, rect: number[]) {
+    divideRects(divNode: DivNode, divided: AreasMap, rect: Rect) {
         let self = this;
 
         if (!divNode.children) {
@@ -225,7 +237,7 @@ class TreeMap {
             (divNode.children[0].size + divNode.children[1].size);
 
         // 長い辺の方を分割
-        let result = 
+        let result: Rect[] = 
             (width * 1.02 > height) ?   // ラベルを考慮して少しだけ縦長に
             [
                 [left, top, left + width*ratio, bottom],
@@ -242,7 +254,7 @@ class TreeMap {
     // 描画領域の作成
     createTreeMap(
         fileNode: FileNode, virtWidth: number, virtHeight: number, 
-        viewPort: number[], margin: number[], isSizeMode: boolean
+        viewPort: ViewPort, margin: Margin, isSizeMode: boolean
     ) {
         let self = this;
         self.root_ = fileNode;
@@ -253,7 +265,7 @@ class TreeMap {
             self.treeMapCache_ = {};
         }
 
-        function traverse(fileNode: FileNode, areas: any, virtRect: number[], level: number) {
+        function traverse(fileNode: FileNode, areas: AreaEntry[], virtRect: Rect, level: number) {
             let cache = self.getDivTree(fileNode, virtWidth/virtHeight);
             let width = virtRect[2] - virtRect[0];
             let height = virtRect[3] - virtRect[1];
@@ -261,10 +273,10 @@ class TreeMap {
                 return;
             }
 
-            for (let key in cache.areas) {
-                let ar = cache.areas[key];
+            for (let key in cache.areas!) {
+                let ar = cache.areas![key];
 
-                let r = [
+                let r: Rect = [
                     virtRect[0] + ar[0] * width, 
                     virtRect[1] + ar[1] * height, 
                     virtRect[0] + ar[2] * width, 
@@ -292,16 +304,16 @@ class TreeMap {
         }
 
         
-        let wholeAreas: any[] = []; // {key, rect, level, fileNode}
-        let curAreas: any[] = [];
+        let wholeAreas: AreaEntry[] = []; // {key, rect, level, fileNode}
+        let curAreas: AreaEntry[] = [];
         traverse(fileNode, curAreas, [0, 0, virtWidth, virtHeight], 0);
         wholeAreas = wholeAreas.concat(curAreas);
 
         for (let level = 1; level < 100; level++) {
-            let nextAreas: any[] = [];
+            let nextAreas: AreaEntry[] = [];
             for (let a of curAreas) {
-                if (a.fileNode.children && Object.keys(a.fileNode.children).length > 0) {
-                    let r = [
+                if (a.fileNode && a.fileNode.children && Object.keys(a.fileNode.children).length > 0) {
+                    let r: Rect = [
                         a.rect[0] + margin[0],
                         a.rect[1] + margin[1],
                         a.rect[2] + margin[2],
@@ -338,14 +350,14 @@ class TreeMap {
     };
 
     // 座標からその場所のパスを得る
-    getFileNodeFromPoint(pos: number[]){
+    getFileNodeFromPoint(pos: Point){
         let self = this;
         if (!self.areas_) {
-            return null;
+            return null as FileNode|null;
         }
 
         // 逆順にみていく
-        let fileNode = null;
+        let fileNode: FileNode|null = null;
         for (let i = self.areas_.length - 1; i >= 0; i--) {
             let r = self.areas_[i].rect;
             if (r[0] < pos[0] && pos[0] < r[2] && 
@@ -363,13 +375,13 @@ class TreeMap {
     };
 
     // 座標からその場所のパスを得る
-    getPathFromPoint(pos: number[]){
+    getPathFromPoint(pos: Point){
         let self = this;
         let fileNode = self.getFileNodeFromPoint(pos);
 
         // ポイントされている位置にみつからなかった
         if (!fileNode) {
-            return null;
+            return null as string|null;
         }
 
         // file tree からパスを生成
@@ -377,5 +389,3 @@ class TreeMap {
     }
 }
 export default TreeMap;
-
-
