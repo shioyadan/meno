@@ -451,8 +451,8 @@ const Breadcrumb = (props: {store: Store;}) => {
             className={`breadcrumb-overlay ${theme === "dark" ? "dark" : "light"}`}
             style={{
                 position: 'absolute',
-                top: '10px',
-                left: '10px'
+                right: '10px',
+                bottom: '10px',
             }}
         >
             <div className="breadcrumb-list">
