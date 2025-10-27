@@ -1,4 +1,4 @@
-├─ @babel/runtime@7.25.7
+├─ @babel/runtime@7.28.4
 │  ├─ licenses: MIT
 │  ├─ repository: https://github.com/babel/babel
 │  ├─ publisher: The Babel Team
@@ -12,11 +12,11 @@
 │  ├─ email: federico.zivolo@gmail.com
 │  ├─ path: node_modules/@popperjs/core
 │  └─ licenseFile: node_modules/@popperjs/core/LICENSE.md
-├─ @react-aria/ssr@3.9.6
+├─ @react-aria/ssr@3.9.10
 │  ├─ licenses: Apache-2.0
 │  ├─ repository: https://github.com/adobe/react-spectrum
 │  ├─ path: node_modules/@react-aria/ssr
-│  └─ licenseFile: node_modules/@react-aria/ssr/README.md
+│  └─ licenseFile: node_modules/@react-aria/ssr/LICENSE
 ├─ @restart/hooks@0.4.16
 │  ├─ licenses: MIT
 │  ├─ repository: https://github.com/jquense/react-common-hooks
@@ -24,31 +24,38 @@
 │  ├─ email: monastic.panic@gmail.com
 │  ├─ path: node_modules/@restart/hooks
 │  └─ licenseFile: node_modules/@restart/hooks/LICENSE
-├─ @restart/ui@1.8.0
+├─ @restart/hooks@0.5.1
+│  ├─ licenses: MIT
+│  ├─ repository: https://github.com/jquense/react-common-hooks
+│  ├─ publisher: Jason Quense
+│  ├─ email: monastic.panic@gmail.com
+│  ├─ path: node_modules/@restart/ui/node_modules/@restart/hooks
+│  └─ licenseFile: node_modules/@restart/ui/node_modules/@restart/hooks/LICENSE
+├─ @restart/ui@1.9.4
 │  ├─ licenses: MIT
 │  ├─ repository: https://github.com/react-restart/ui
 │  ├─ publisher: Jason Quense
 │  ├─ email: monastic.panic@gmail.com
 │  ├─ path: node_modules/@restart/ui
 │  └─ licenseFile: node_modules/@restart/ui/LICENSE
-├─ @swc/helpers@0.5.13
+├─ @swc/helpers@0.5.17
 │  ├─ licenses: Apache-2.0
 │  ├─ repository: https://github.com/swc-project/swc
 │  ├─ publisher: 강동윤
 │  ├─ email: kdy1997.dev@gmail.com
 │  ├─ path: node_modules/@swc/helpers
 │  └─ licenseFile: node_modules/@swc/helpers/LICENSE
-├─ @types/prop-types@15.7.13
+├─ @types/prop-types@15.7.15
 │  ├─ licenses: MIT
 │  ├─ repository: https://github.com/DefinitelyTyped/DefinitelyTyped
 │  ├─ path: node_modules/@types/prop-types
 │  └─ licenseFile: node_modules/@types/prop-types/LICENSE
-├─ @types/react-transition-group@4.4.11
+├─ @types/react-transition-group@4.4.12
 │  ├─ licenses: MIT
 │  ├─ repository: https://github.com/DefinitelyTyped/DefinitelyTyped
 │  ├─ path: node_modules/@types/react-transition-group
 │  └─ licenseFile: node_modules/@types/react-transition-group/LICENSE
-├─ @types/react@18.3.11
+├─ @types/react@19.2.2
 │  ├─ licenses: MIT
 │  ├─ repository: https://github.com/DefinitelyTyped/DefinitelyTyped
 │  ├─ path: node_modules/@types/react
@@ -58,13 +65,13 @@
 │  ├─ repository: https://github.com/DefinitelyTyped/DefinitelyTyped
 │  ├─ path: node_modules/@types/warning
 │  └─ licenseFile: node_modules/@types/warning/LICENSE
-├─ bootstrap-icons@1.11.3
+├─ bootstrap-icons@1.13.1
 │  ├─ licenses: MIT
 │  ├─ repository: https://github.com/twbs/icons
 │  ├─ publisher: mdo
 │  ├─ path: node_modules/bootstrap-icons
 │  └─ licenseFile: node_modules/bootstrap-icons/LICENSE
-├─ bootstrap@5.3.3
+├─ bootstrap@5.3.8
 │  ├─ licenses: MIT
 │  ├─ repository: https://github.com/twbs/bootstrap
 │  ├─ publisher: The Bootstrap Authors
@@ -144,14 +151,14 @@
 │  ├─ repository: https://github.com/facebook/prop-types
 │  ├─ path: node_modules/prop-types
 │  └─ licenseFile: node_modules/prop-types/LICENSE
-├─ react-bootstrap@2.10.5
+├─ react-bootstrap@2.10.10
 │  ├─ licenses: MIT
 │  ├─ repository: https://github.com/react-bootstrap/react-bootstrap
 │  ├─ publisher: Stephen J. Collings
 │  ├─ email: stevoland@gmail.com
 │  ├─ path: node_modules/react-bootstrap
 │  └─ licenseFile: node_modules/react-bootstrap/LICENSE
-├─ react-dom@18.3.1
+├─ react-dom@19.2.0
 │  ├─ licenses: MIT
 │  ├─ repository: https://github.com/facebook/react
 │  ├─ path: node_modules/react-dom
@@ -171,24 +178,17 @@
 │  ├─ repository: https://github.com/reactjs/react-transition-group
 │  ├─ path: node_modules/react-transition-group
 │  └─ licenseFile: node_modules/react-transition-group/LICENSE
-├─ react@18.3.1
+├─ react@19.2.0
 │  ├─ licenses: MIT
 │  ├─ repository: https://github.com/facebook/react
 │  ├─ path: node_modules/react
 │  └─ licenseFile: node_modules/react/LICENSE
-├─ regenerator-runtime@0.14.1
-│  ├─ licenses: MIT
-│  ├─ repository: https://github.com/facebook/regenerator/tree/main/packages/runtime
-│  ├─ publisher: Ben Newman
-│  ├─ email: bn@cs.stanford.edu
-│  ├─ path: node_modules/regenerator-runtime
-│  └─ licenseFile: node_modules/regenerator-runtime/LICENSE
-├─ scheduler@0.23.2
+├─ scheduler@0.27.0
 │  ├─ licenses: MIT
 │  ├─ repository: https://github.com/facebook/react
 │  ├─ path: node_modules/scheduler
 │  └─ licenseFile: node_modules/scheduler/LICENSE
-├─ tslib@2.7.0
+├─ tslib@2.8.1
 │  ├─ licenses: 0BSD
 │  ├─ repository: https://github.com/Microsoft/tslib
 │  ├─ publisher: Microsoft Corp.
