@@ -87,7 +87,7 @@ const fileNodeToStr = (fileNode: FileNode, isSizeMode: boolean, unit: string = "
     const percentage =
         rootSize > 0 ? ((fileNode.size / rootSize) * 100).toFixed(2) : "0.00";
 
-    return ` [${str} unit, ${percentage}%]`;
+    return ` [${str} ${unit}, ${percentage}%]`;
 }
 
 
