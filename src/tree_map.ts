@@ -33,6 +33,8 @@ interface AreaEntry {
     rect: Rect;
     level: number;
     fileNode: FileNode|null;
+    // 末端の矩形かどうか（子が存在しても省略されている場合は true）
+    isLeaf: boolean;
 }
 
 class TreeMap {
@@ -297,7 +299,8 @@ class TreeMap {
                     key: key,
                     rect: r,
                     level: level,
-                    fileNode: fileNode.children?.[key] || null
+                    fileNode: fileNode.children?.[key] || null,
+                    isLeaf: true // いったん末端と仮定し，後段で子を展開した場合に false に更新
                 });
             }
 
@@ -322,6 +325,8 @@ class TreeMap {
 
                     // 一定以上の大きさなら探索
                     if (r[2] - r[0] > 40 && r[3] - r[1] > 40){
+                        // 子を展開できる＝描画上は末端ではない
+                        a.isLeaf = false;
                         traverse(a.fileNode, nextAreas, r, level);
                     }
                 }

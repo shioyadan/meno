@@ -55,6 +55,17 @@ class TreeMapRenderer {
     getPathFromFileNode(fileNode: FileNode) {
         return this.treeMap_.getPathFromFileNode(fileNode);
     };    
+
+    // 指定ノード以下に searchSet の要素が含まれているか（自身を含む）
+    private containsAnyDescendant(node: FileNode|null, searchSet: Set<FileNode>): boolean {
+        if (!node) return false;
+        if (searchSet.has(node)) return true;
+        if (!node.children) return false;
+        for (let k in node.children) {
+            if (this.containsAnyDescendant(node.children[k], searchSet)) return true;
+        }
+        return false;
+    }
     
     // canvas に対し，tree のファイルツリーを
     // virtualWidth/virtualHeight に対応した大きさの tree map を生成し，
@@ -148,15 +159,35 @@ class TreeMapRenderer {
         
         // 検索結果のノードをハイライト
         c.lineWidth = 4; 
+        const searchSet = new Set<FileNode>(searchResults);
         c.strokeStyle = "#FFD700"; // ゴールド色でハイライト
         for (let a of areas) {
-            if (a.fileNode && searchResults.includes(a.fileNode)) {
+            if (a.fileNode && searchSet.has(a.fileNode)) {
                 let rect = a.rect;
                 c.strokeRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
                 
                 // 検索結果のノードには半透明のオーバーレイを追加
                 c.fillStyle = "rgba(255, 215, 0, 0.3)"; // 半透明のゴールド
                 c.fillRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
+            }
+        }
+
+        // 末端の矩形（isLeaf）で，子ノードに検索結果が含まれている場合もハイライト
+        // 直接の一致とは色を変える
+        c.lineWidth = 3;
+        c.strokeStyle = "#FFA500"; // 直接一致より少しオレンジ寄り
+        for (let a of areas) {
+            if (!a.fileNode) continue;
+            // 末端の矩形とは，自分の子供のノードがいてもそれらが省略されている場合も含む
+            if (a.isLeaf && a.fileNode.hasChildren && !searchSet.has(a.fileNode)) {
+                if (self.containsAnyDescendant(a.fileNode, searchSet)) {
+                    let rect = a.rect;
+                    c.strokeRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
+
+                    // 子に検索結果がいることを示すため，やや弱めのオーバーレイ
+                    c.fillStyle = "rgba(255, 165, 0, 0.20)"; // 半透明のオレンジ
+                    c.fillRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
+                }
             }
         }
 
