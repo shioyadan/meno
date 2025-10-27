@@ -70,6 +70,12 @@ const ToolBar = (props: {store: Store;}) => {
     const [selectedKey, setSelectedKey] = useState(0);
 
     const [theme, setTheme] = useState(store.uiTheme); // 現在のテーマを管理
+    // 画面幅に応じてコンパクト表示（サーチ以外をドロップダウン内に集約）
+    const [isCompact, setIsCompact] = useState<boolean>(() => {
+        if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+        return window.matchMedia("(max-width: 576px)").matches; // Bootstrap sm 未満
+    });
+
     useEffect(() => { // マウント時
         store.on(CHANGE.CHANGE_UI_THEME, () => {
             setTheme(store.uiTheme);
@@ -96,13 +102,36 @@ const ToolBar = (props: {store: Store;}) => {
 
         document.addEventListener('keydown', handleKeydown);
 
+        // 画面幅監視（sm 未満でコンパクト表示）
+        let mql: MediaQueryList | null = null;
+        const setupMql = () => {
+            if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+                mql = window.matchMedia("(max-width: 576px)");
+                const listener = (e: MediaQueryListEvent) => setIsCompact(e.matches);
+                // Safari 14 対応のため addEventListener と addListener 両対応
+                if (typeof mql.addEventListener === "function") {
+                    mql.addEventListener("change", listener);
+                } else if (typeof (mql as any).addListener === "function") {
+                    (mql as any).addListener(listener);
+                }
+            }
+        };
+        setupMql();
+
         // クリーンアップ
         return () => {
             document.removeEventListener('keydown', handleKeydown);
+            if (mql) {
+                const listener = (e: MediaQueryListEvent) => setIsCompact(e.matches);
+                if (typeof mql.removeEventListener === "function") {
+                    mql.removeEventListener("change", listener);
+                } else if (typeof (mql as any).removeListener === "function") {
+                    (mql as any).removeListener(listener);
+                }
+            }
         };
     }, []);
 
-    // --- ここからローカル関数で JSX を分割 ---
     const renderMenuDropdown = () => (
         <Nav onSelect={dispatch} activeKey={selectedKey}>
             <NavDropdown menuVariant={theme} title={<i className="bi bi-list"></i>} id="collapsible-nav-dropdown">
@@ -117,6 +146,21 @@ const ToolBar = (props: {store: Store;}) => {
                     {theme === "light" && <i className="bi bi-check"></i>} Light
                 </NavDropdown.Item>
                 <NavDropdown.Divider />
+                {/* コンパクト時はズーム関連もドロップダウンに格納 */}
+                {isCompact && (
+                    <>
+                        <NavDropdown.Item eventKey="zoom-in">
+                            <i className="bi bi-zoom-in"></i> Zoom In
+                        </NavDropdown.Item>
+                        <NavDropdown.Item eventKey="zoom-out">
+                            <i className="bi bi-zoom-out"></i> Zoom Out
+                        </NavDropdown.Item>
+                        <NavDropdown.Item eventKey="fit">
+                            <i className="bi bi-arrows-fullscreen"></i> Fit
+                        </NavDropdown.Item>
+                        <NavDropdown.Divider />
+                    </>
+                )}
                 <NavDropdown.Item eventKey="version">
                     Version information
                 </NavDropdown.Item>
@@ -135,7 +179,7 @@ const ToolBar = (props: {store: Store;}) => {
                 <i className="bi bi-zoom-out"></i> Zoom Out                
             </Nav.Link>
             <Nav.Link className="nav-link tool-bar-link" eventKey="fit">
-                <i className="bi bi-arrows-fullscreen"></i> Fit to Canvas
+                <i className="bi bi-arrows-fullscreen"></i> Fit
             </Nav.Link>
         </Nav>
     );
@@ -167,7 +211,6 @@ const ToolBar = (props: {store: Store;}) => {
             </div>
         </Nav>
     );
-    // --- 分割ここまで ---
 
     return (
         <Navbar 
@@ -178,7 +221,8 @@ const ToolBar = (props: {store: Store;}) => {
             <Navbar.Toggle aria-controls="responsive-navbar-nav" />
             <Navbar.Collapse id="responsive-navbar-nav">
                 {renderMenuDropdown()}
-                {renderZoomLinks()}
+                {/* 横幅が狭い時はサーチ以外のアイテムをドロップダウン内に寄せる */}
+                {!isCompact && renderZoomLinks()}
                 {renderSearchBox()}
             </Navbar.Collapse>
         </Navbar>
