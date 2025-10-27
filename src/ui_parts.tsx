@@ -389,6 +389,7 @@ const ContextMenu = (props: {
     const canSetAsRoot = targetNode.children && Object.keys(targetNode.children).length > 0;
     const isNotOriginalRoot = store.currentRootNode !== store.originalTree;
     const hasParent = store.currentRootNode && store.currentRootNode.parent;
+    const isAtOriginalRoot = store.currentRootNode === store.originalTree; // ★ 追加: ルートかどうか
 
     return (
         <div
@@ -405,11 +406,14 @@ const ContextMenu = (props: {
                         <i className="bi bi-arrow-up-right-circle"></i> Set as Root
                     </div>
                 )}
-                {hasParent && (
-                    <div onClick={handleSetParentAsRoot} className="context-menu__item">
-                        <i className="bi bi-arrow-up"></i> Go Up One Level
-                    </div>
-                )}
+                <div
+                    onClick={!isAtOriginalRoot && hasParent ? handleSetParentAsRoot : undefined}
+                    className={`context-menu__item ${isAtOriginalRoot || !hasParent ? "is-disabled" : ""}`}
+                    aria-disabled={isAtOriginalRoot || !hasParent}
+                    style={isAtOriginalRoot || !hasParent ? { opacity: 0.5, pointerEvents: 'none' } : undefined}
+                >
+                    <i className="bi bi-arrow-up"></i> Go Up One Level
+                </div>
                 {isNotOriginalRoot && (
                     <div onClick={handleResetRoot} className="context-menu__item">
                         <i className="bi bi-house"></i> Reset to Original Root
