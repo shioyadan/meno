@@ -307,10 +307,15 @@ class TreeMap {
         }
 
         
-        let wholeAreas: AreaEntry[] = []; // {key, rect, level, fileNode}
-        let curAreas: AreaEntry[] = [];
-        traverse(fileNode, curAreas, [0, 0, virtWidth, virtHeight], 0);
-        wholeAreas = wholeAreas.concat(curAreas);
+        let rootAreaEntry: AreaEntry = {
+            key: fileNode.key,
+            rect: [0, 0, virtWidth, virtHeight],
+            level: 0,
+            fileNode: fileNode,
+            isLeaf: true
+        };
+        let curAreas: AreaEntry[] = [rootAreaEntry];
+        let wholeAreas: AreaEntry[] = [rootAreaEntry];
 
         for (let level = 1; level < 100; level++) {
             let nextAreas: AreaEntry[] = [];
