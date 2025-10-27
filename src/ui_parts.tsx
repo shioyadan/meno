@@ -102,6 +102,73 @@ const ToolBar = (props: {store: Store;}) => {
         };
     }, []);
 
+    // --- ここからローカル関数で JSX を分割 ---
+    const renderMenuDropdown = () => (
+        <Nav onSelect={dispatch} activeKey={selectedKey}>
+            <NavDropdown menuVariant={theme} title={<i className="bi bi-list"></i>} id="collapsible-nav-dropdown">
+                <NavDropdown.Item eventKey="import">
+                    Import file
+                </NavDropdown.Item>
+                <NavDropdown.Divider />
+                <NavDropdown.Item eventKey="set-dark" active={theme === "dark"}>
+                    {theme === "dark" && <i className="bi bi-check"></i>} Dark
+                </NavDropdown.Item>
+                <NavDropdown.Item eventKey="set-light" active={theme === "light"}>
+                    {theme === "light" && <i className="bi bi-check"></i>} Light
+                </NavDropdown.Item>
+                <NavDropdown.Divider />
+                <NavDropdown.Item eventKey="version">
+                    Version information
+                </NavDropdown.Item>
+            </NavDropdown>
+        </Nav>
+    );
+
+    const renderZoomLinks = () => (
+        <Nav onSelect={dispatch} activeKey={selectedKey}
+            style={{ color: theme == "dark" ? "#C9CACB" : "#ffffff" }} className="me-auto" // このクラスでリンクが左側に配置される
+        >
+            <Nav.Link className="nav-link tool-bar-link" eventKey="zoom-in">
+                <i className="bi bi-zoom-in"></i> Zoom In                
+            </Nav.Link>
+            <Nav.Link className="nav-link tool-bar-link" eventKey="zoom-out">
+                <i className="bi bi-zoom-out"></i> Zoom Out                
+            </Nav.Link>
+            <Nav.Link className="nav-link tool-bar-link" eventKey="fit">
+                <i className="bi bi-arrows-fullscreen"></i> Fit to Canvas
+            </Nav.Link>
+        </Nav>
+    );
+
+    const renderSearchBox = () => (
+        // 検索ボックス
+        <Nav className="ms-auto">
+            <div style={{ paddingRight: "8px" }}>
+                <InputGroup size="sm" style={{ width: "250px" }}>
+                    <FormControl
+                        className={`search-input ${theme === "dark" ? "dark" : "light"}`}
+                        ref={searchInputRef}
+                        placeholder="Search nodes... (Press '/' to focus)"
+                        value={searchQuery}
+                        onChange={handleSearchInputChange}
+                        onKeyDown={handleSearchKeyDown}
+                    />
+                    {searchQuery && (
+                        <Button 
+                            variant="outline-secondary" 
+                            size="sm"
+                            onClick={handleSearchClear}
+                            className={`search-clear ${theme === "dark" ? "is-dark" : "is-light"}`}
+                        >
+                            <i className="bi bi-x"></i>
+                        </Button>
+                    )}
+                </InputGroup>
+            </div>
+        </Nav>
+    );
+    // --- 分割ここまで ---
+
     return (
         <Navbar 
             expand={true} 
@@ -110,63 +177,9 @@ const ToolBar = (props: {store: Store;}) => {
         >
             <Navbar.Toggle aria-controls="responsive-navbar-nav" />
             <Navbar.Collapse id="responsive-navbar-nav">
-            <Nav onSelect={dispatch} activeKey={selectedKey}>
-                <NavDropdown menuVariant={theme} title={<i className="bi bi-list"></i>} id="collapsible-nav-dropdown">
-                    <NavDropdown.Item eventKey="import">
-                        Import file
-                    </NavDropdown.Item>
-                    <NavDropdown.Divider />
-                    <NavDropdown.Item eventKey="set-dark" active={theme === "dark"}>
-                        {theme === "dark" && <i className="bi bi-check"></i>} Dark
-                    </NavDropdown.Item>
-                    <NavDropdown.Item eventKey="set-light" active={theme === "light"}>
-                        {theme === "light" && <i className="bi bi-check"></i>} Light
-                    </NavDropdown.Item>
-                    <NavDropdown.Divider />
-                    <NavDropdown.Item eventKey="version">
-                        Version information
-                    </NavDropdown.Item>
-                </NavDropdown>
-            </Nav>
-            <Nav onSelect={dispatch} activeKey={selectedKey}
-                style={{ color: theme == "dark" ? "#C9CACB" : "#ffffff" }} className="me-auto" // このクラスでリンクが左側に配置される
-            >
-                <Nav.Link className="nav-link tool-bar-link" eventKey="zoom-in">
-                    <i className="bi bi-zoom-in"></i> Zoom In                
-                </Nav.Link>
-                <Nav.Link className="nav-link tool-bar-link" eventKey="zoom-out">
-                    <i className="bi bi-zoom-out"></i> Zoom Out                
-                </Nav.Link>
-                <Nav.Link className="nav-link tool-bar-link" eventKey="fit">
-                    <i className="bi bi-arrows-fullscreen"></i> Fit to Canvas
-                </Nav.Link>
-            </Nav>
-            
-            {/* 検索ボックス */}
-            <Nav className="ms-auto">
-                <div style={{ paddingRight: "8px" }}>
-                    <InputGroup size="sm" style={{ width: "250px" }}>
-                        <FormControl
-                            className={`search-input ${theme === "dark" ? "dark" : "light"}`}
-                            ref={searchInputRef}
-                            placeholder="Search nodes... (Press '/' to focus)"
-                            value={searchQuery}
-                            onChange={handleSearchInputChange}
-                            onKeyDown={handleSearchKeyDown}
-                        />
-                        {searchQuery && (
-                            <Button 
-                                variant="outline-secondary" 
-                                size="sm"
-                                onClick={handleSearchClear}
-                                className={`search-clear ${theme === "dark" ? "is-dark" : "is-light"}`}
-                            >
-                                <i className="bi bi-x"></i>
-                            </Button>
-                        )}
-                    </InputGroup>
-                </div>
-            </Nav>
+                {renderMenuDropdown()}
+                {renderZoomLinks()}
+                {renderSearchBox()}
             </Navbar.Collapse>
         </Navbar>
     );
