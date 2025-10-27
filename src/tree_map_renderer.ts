@@ -1,4 +1,4 @@
-import TreeMap, { AreaEntry, Rect } from "./tree_map";
+import TreeMap, { AreaEntry, Rect, Point } from "./tree_map";
 import {FileNode} from "./loader";
 
 type FileNodeToStrFunction = (fileNode: FileNode, isSizeMode: boolean) => string;
@@ -37,7 +37,7 @@ class TreeMapRenderer {
 
     // 各タイルの中の子タイルへのマージン
     // rect の各方向に足される
-    TILE_MARGIN: number[] = [8, 8 + this.FONT_SIZE, -8, -8];
+    TILE_MARGIN: Rect = [8, 8 + this.FONT_SIZE, -8, -8];
 
     treeMap_ = new TreeMap();
 
@@ -48,8 +48,8 @@ class TreeMapRenderer {
         this.treeMap_.clear();
     }
 
-    getFileNodeFromPoint(pos: number[]) {
-        return this.treeMap_.getFileNodeFromPoint(pos as [number, number]);
+    getFileNodeFromPoint(pos: Point) {
+        return this.treeMap_.getFileNodeFromPoint(pos);
     };
 
     getPathFromFileNode(fileNode: FileNode) {
@@ -85,7 +85,7 @@ class TreeMapRenderer {
             virtualWidth, 
             virtualHeight, 
             viewPort,
-            self.TILE_MARGIN as Rect,
+            self.TILE_MARGIN,
             isSizeMode
         );
 
@@ -150,7 +150,7 @@ class TreeMapRenderer {
         c.lineWidth = 4; 
         c.strokeStyle = "#FFD700"; // ゴールド色でハイライト
         for (let a of areas) {
-            if (searchResults.includes(a.fileNode as FileNode)) {
+            if (a.fileNode && searchResults.includes(a.fileNode)) {
                 let rect = a.rect;
                 c.strokeRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
                 

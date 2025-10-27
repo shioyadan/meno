@@ -3,11 +3,11 @@
 //
 import {FileNode} from "./loader";
 
-export type Point = [number, number];
-export type Rect = [number, number, number, number];
-export type Margin = Rect;
-export type ViewPort = Rect;
-export type AreasMap = Record<string, Rect>;
+type Point = [number, number];
+type Rect = [number, number, number, number];
+type Margin = Rect;
+type ViewPort = Rect;
+type AreasMap = Record<string, Rect>;
 
 class DivNode {
     fileNode: FileNode|null = null;
@@ -28,7 +28,7 @@ class TreeMapCacheEntry {
     }
 }
 
-export interface AreaEntry {
+interface AreaEntry {
     key: string;
     rect: Rect;
     level: number;
@@ -350,10 +350,10 @@ class TreeMap {
     };
 
     // 座標からその場所のパスを得る
-    getFileNodeFromPoint(pos: Point){
+    getFileNodeFromPoint(pos: Point) : FileNode|null{
         let self = this;
         if (!self.areas_) {
-            return null as FileNode|null;
+            return null;
         }
 
         // 逆順にみていく
@@ -375,13 +375,13 @@ class TreeMap {
     };
 
     // 座標からその場所のパスを得る
-    getPathFromPoint(pos: Point){
+    getPathFromPoint(pos: Point) : string|null {
         let self = this;
         let fileNode = self.getFileNodeFromPoint(pos);
 
         // ポイントされている位置にみつからなかった
         if (!fileNode) {
-            return null as string|null;
+            return null;
         }
 
         // file tree からパスを生成
@@ -389,3 +389,4 @@ class TreeMap {
     }
 }
 export default TreeMap;
+export {TreeMap, AreaEntry, Point, Rect};
