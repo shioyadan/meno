@@ -71,3 +71,148 @@ html, body, #root {
     color: #6c757d;
     background-color: transparent;
 }
+
+
+/* ContextMenu */
+.context-menu {
+    z-index: 1050;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    min-width: 200px;
+    border: 1px solid transparent; /* theme で上書き */
+    background-color: transparent;  /* theme で上書き */
+}
+
+.context-menu.dark {
+    background-color: #343a40;
+    border-color: #495057;
+}
+
+.context-menu.light {
+    background-color: #ffffff;
+    border-color: #dee2e6;
+}
+
+.context-menu__body {
+    padding: 8px 0;
+}
+
+.context-menu__header {
+    padding: 8px 16px;
+    font-size: 12px;
+    border-bottom: 1px solid transparent; /* theme で上書き */
+    margin-bottom: 4px;
+    color: #6c757d;                        /* light デフォルト */
+}
+
+.context-menu.dark .context-menu__header {
+    color: #adb5bd;
+    border-bottom-color: #495057;
+}
+
+.context-menu.light .context-menu__header {
+    color: #6c757d;
+    border-bottom-color: #dee2e6;
+}
+
+.context-menu__item {
+    padding: 8px 16px;
+    cursor: pointer;
+    background-color: transparent;
+    color: inherit; /* 親の色に依存 */
+}
+
+.context-menu.dark .context-menu__item {
+    color: #ffffff;
+}
+
+.context-menu.light .context-menu__item {
+    color: #000000;
+}
+
+.context-menu__item:hover {
+    background-color: rgba(0,0,0,0.04);
+}
+
+.context-menu.dark .context-menu__item:hover {
+    background-color: #495057;
+}
+
+.context-menu.light .context-menu__item:hover {
+    background-color: #f8f9fa;
+}
+
+
+/* パンくずリスト */
+.breadcrumb-overlay {
+    z-index: 10;
+    border-radius: 3px;
+    padding: 6px 6px;
+    font-size: 12px;
+    font-family: monospace;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    backdrop-filter: blur(4px);
+    max-width: 60%;
+    overflow: hidden;
+    border: 0.5px solid transparent; /* theme で上書き */
+    background-color: transparent;   /* theme で上書き */
+}
+
+.breadcrumb-overlay.dark {
+    background-color: #2e3641;
+    border-color: #495057;
+}
+
+.breadcrumb-overlay.light {
+    background-color: #e0e0e0;
+    border-color: #dee2e6;
+}
+
+.breadcrumb-list {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+}
+
+.breadcrumb-sep {
+    margin: 0 6px;
+    font-size: 12px;
+    color: #adb5bd; /* light デフォルトを先に */
+}
+
+.breadcrumb-overlay.dark .breadcrumb-sep {
+    color: #6c757d;
+}
+
+.breadcrumb-link {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.breadcrumb-link.is-current {
+    cursor: default;
+    font-weight: bold;
+    text-decoration: none;
+    color: #000000; /* light デフォルト */
+}
+
+.breadcrumb-overlay.dark .breadcrumb-link.is-current {
+    color: #909192;
+}
+
+.breadcrumb-link.is-interactive {
+    cursor: pointer;
+    text-decoration: underline;
+    color: #507bdf; /* light デフォルト */
+}
+
+.breadcrumb-overlay.dark .breadcrumb-link.is-interactive {
+    color: #17a2b8;
+}

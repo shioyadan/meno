@@ -359,87 +359,26 @@ const ContextMenu = (props: {
 
     return (
         <div
-            style={{
-                position: 'fixed',
-                top: y,
-                left: x,
-                zIndex: 1050,
-                backgroundColor: theme === "dark" ? "#343a40" : "#ffffff",
-                border: `1px solid ${theme === "dark" ? "#495057" : "#dee2e6"}`,
-                borderRadius: '4px',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
-                minWidth: '200px'
-            }}
+            className={`context-menu ${theme === "dark" ? "dark" : "light"}`}
+            style={{ position: 'fixed', top: y, left: x }}
         >
-            <div style={{ padding: '8px 0' }}>
-                <div
-                    style={{
-                        padding: '8px 16px',
-                        fontSize: '12px',
-                        color: theme === "dark" ? "#adb5bd" : "#6c757d",
-                        borderBottom: `1px solid ${theme === "dark" ? "#495057" : "#dee2e6"}`,
-                        marginBottom: '4px'
-                    }}
-                >
+            <div className="context-menu__body">
+                <div className="context-menu__header">
                     {targetNode.key}
                 </div>
                 
                 {canSetAsRoot && (
-                    <div
-                        onClick={handleSetAsRoot}
-                        style={{
-                            padding: '8px 16px',
-                            cursor: 'pointer',
-                            color: theme === "dark" ? "#ffffff" : "#000000",
-                            backgroundColor: 'transparent'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = theme === "dark" ? "#495057" : "#f8f9fa";
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                        }}
-                    >
+                    <div onClick={handleSetAsRoot} className="context-menu__item">
                         <i className="bi bi-arrow-up-right-circle"></i> Set as Root
                     </div>
                 )}
-                
                 {hasParent && (
-                    <div
-                        onClick={handleSetParentAsRoot}
-                        style={{
-                            padding: '8px 16px',
-                            cursor: 'pointer',
-                            color: theme === "dark" ? "#ffffff" : "#000000",
-                            backgroundColor: 'transparent'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = theme === "dark" ? "#495057" : "#f8f9fa";
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                        }}
-                    >
+                    <div onClick={handleSetParentAsRoot} className="context-menu__item">
                         <i className="bi bi-arrow-up"></i> Go Up One Level
                     </div>
                 )}
-                
                 {isNotOriginalRoot && (
-                    <div
-                        onClick={handleResetRoot}
-                        style={{
-                            padding: '8px 16px',
-                            cursor: 'pointer',
-                            color: theme === "dark" ? "#ffffff" : "#000000",
-                            backgroundColor: 'transparent'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = theme === "dark" ? "#495057" : "#f8f9fa";
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                        }}
-                    >
+                    <div onClick={handleResetRoot} className="context-menu__item">
                         <i className="bi bi-house"></i> Reset to Original Root
                     </div>
                 )}
@@ -454,20 +393,10 @@ const Breadcrumb = (props: {store: Store;}) => {
     const [theme, setTheme] = useState(store.uiTheme);
 
     useEffect(() => {
-        store.on(CHANGE.CHANGE_UI_THEME, () => {
-            setTheme(store.uiTheme);
-        });
-        
-        store.on(CHANGE.ROOT_NODE_CHANGED, () => {
-            setBreadcrumbPath(store.getBreadcrumbPath());
-        });
-
-        store.on(CHANGE.TREE_LOADED, () => {
-            setBreadcrumbPath(store.getBreadcrumbPath());
-        });
-
-        // 初期値を設定
-        setBreadcrumbPath(store.getBreadcrumbPath());
+        store.on(CHANGE.CHANGE_UI_THEME,    () => { setTheme(store.uiTheme); });
+        store.on(CHANGE.ROOT_NODE_CHANGED,  () => { setBreadcrumbPath(store.getBreadcrumbPath()); });
+        store.on(CHANGE.TREE_LOADED,        () => { setBreadcrumbPath(store.getBreadcrumbPath()); });
+        setBreadcrumbPath(store.getBreadcrumbPath());   // 初期値を設定
     }, []);
 
     const handleBreadcrumbClick = (node: FileNode) => {
@@ -482,55 +411,33 @@ const Breadcrumb = (props: {store: Store;}) => {
 
     return (
         <div
+            className={`breadcrumb-overlay ${theme === "dark" ? "dark" : "light"}`}
             style={{
                 position: 'absolute',
                 top: '10px',
-                left: '10px',
-                zIndex: 10,
-                backgroundColor: theme === "dark" ? "#2e3641" : "#e0e0e0",
-                border: `0.5px solid ${theme === "dark" ? "#495057" : "#dee2e6"}`,
-                borderRadius: '3px',
-                padding: '6px 6px',
-                fontSize: '12px',
-                fontFamily: 'monospace',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                backdropFilter: 'blur(4px)',
-                maxWidth: '60%',
-                overflow: 'hidden'
+                left: '10px'
             }}
         >
-            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="breadcrumb-list">
                 {breadcrumbPath.map((node, index) => (
-                    <span key={index} style={{ display: 'flex', alignItems: 'center' }}>
+                    <span key={index} className="breadcrumb-item">
                         {index > 0 && (
-                            <i className="bi bi-chevron-right" style={{ 
-                                margin: '0 6px', 
-                                fontSize: '12px',
-                                color: theme === "dark" ? "#6c757d" : "#adb5bd"
-                            }}></i>
+                            <i className="bi bi-chevron-right breadcrumb-sep"></i>
                         )}
                         <span
                             onClick={() => handleBreadcrumbClick(node)}
-                            style={{
-                                cursor: index < breadcrumbPath.length - 1 ? 'pointer' : 'default',
-                                color: index === breadcrumbPath.length - 1 
-                                    ? (theme === "dark" ? "#909192" : "#000000")
-                                    : (theme === "dark" ? "#17a2b8" : "#507bdf"),
-                                fontWeight: index === breadcrumbPath.length - 1 ? 'bold' : 'normal',
-                                textDecoration: index < breadcrumbPath.length - 1 ? 'underline' : 'none',
-                                maxWidth: '120px',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap'
-                            }}
+                            className={[
+                                "breadcrumb-link",
+                                index < breadcrumbPath.length - 1 ? "is-interactive" : "is-current"
+                            ].join(" ")}
                             onMouseEnter={(e) => {
                                 if (index < breadcrumbPath.length - 1) {
-                                    e.currentTarget.style.opacity = '0.7';
+                                    (e.currentTarget as HTMLElement).style.opacity = '0.7';
                                 }
                             }}
                             onMouseLeave={(e) => {
                                 if (index < breadcrumbPath.length - 1) {
-                                    e.currentTarget.style.opacity = '1';
+                                    (e.currentTarget as HTMLElement).style.opacity = '1';
                                 }
                             }}
                         >
