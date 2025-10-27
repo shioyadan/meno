@@ -2,8 +2,9 @@ import React, { useRef, useEffect, useState } from "react";
 import Store, { ACTION, CHANGE } from "./store";
 import { FileNode } from "./loader";
 
+import { fileOpen } from "browser-fs-access";
 
-import {Nav, Navbar, NavDropdown, Form, FormControl, InputGroup, Button, Dropdown} from "react-bootstrap";
+import { Nav, Navbar, NavDropdown, Form, FormControl, InputGroup, Button, Dropdown } from "react-bootstrap";
 import { Modal } from "react-bootstrap";
 
 const ToolBar = (props: {store: Store;}) => {
@@ -12,16 +13,13 @@ const ToolBar = (props: {store: Store;}) => {
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     const openFile = async () => {
-        if (typeof (window as any).showOpenFilePicker !== 'function') {
-            console.log("showOpenFilePicker is not supported");
-            return;
+        try {
+            const file = await fileOpen();
+            const contents = await file.text();
+            store.trigger(ACTION.FILE_IMPORT, contents);
+        } catch (error) {
+            console.error("Error opening file:", error);
         }
-        
-        // ファイルを読み込む
-        const [fileHandle] = await (window as any).showOpenFilePicker();
-        const file = await fileHandle.getFile();
-        const contents = await file.text();
-        store.trigger(ACTION.FILE_IMPORT, contents);   
         // console.log(contents); // ファイル内容を表示
     };
 

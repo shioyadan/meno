@@ -78,6 +78,13 @@
 │  ├─ url: https://github.com/twbs/bootstrap/graphs/contributors
 │  ├─ path: node_modules/bootstrap
 │  └─ licenseFile: node_modules/bootstrap/LICENSE
+├─ browser-fs-access@0.38.0
+│  ├─ licenses: Apache-2.0
+│  ├─ repository: https://github.com/GoogleChromeLabs/browser-fs-access
+│  ├─ publisher: Thomas Steiner
+│  ├─ url: https://blog.tomayac.com/
+│  ├─ path: node_modules/browser-fs-access
+│  └─ licenseFile: node_modules/browser-fs-access/LICENSE
 ├─ classnames@2.5.1
 │  ├─ licenses: MIT
 │  ├─ repository: https://github.com/JedWatson/classnames

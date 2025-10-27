@@ -9,7 +9,8 @@
         "bootstrap-icons": "^1.13.1",
         "react": "^19.2.0",
         "react-bootstrap": "^2.10.10",
-        "react-dom": "^19.2.0"
+        "react-dom": "^19.2.0",
+        "browser-fs-access": "^0.38.0"
     },
     "devDependencies": {
         "@types/bootstrap": "^5.2.10",
