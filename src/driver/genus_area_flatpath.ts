@@ -138,7 +138,7 @@ class GenusAreaFlatpathDriver {
                 }
 
             }
-            if (isGenus_) {
+            if (isGenus_ && isGenusFlat_) {
                 finalize(tree);
                 finishCallback(tree.children ? tree.children[Object.keys(tree.children)[0]] : null);
             }
