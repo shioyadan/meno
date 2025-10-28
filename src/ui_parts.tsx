@@ -293,7 +293,7 @@ const StatusBar = (props: {store: Store;}) => {
     const toPercent = (part: number, whole: number): string => {
         if (!whole || whole <= 0) return "0%";
         const pct = (part / whole) * 100;
-        return pct >= 100 || Number.isInteger(pct) ? `${Math.round(pct*100)/100}%` : `${pct.toFixed(1)}%`;
+        return pct >= 100 || Number.isInteger(pct) ? `${Math.round(pct)}%` : `${pct.toFixed(2)}%`;
     };
 
     const getSearchMessage = () => {
