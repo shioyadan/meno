@@ -73,6 +73,7 @@ const ToolBar = (props: {store: Store;}) => {
             case "zoom-in": store.trigger(ACTION.CANVAS_ZOOM_IN); break;
             case "zoom-out": store.trigger(ACTION.CANVAS_ZOOM_OUT); break;
             case "version":  store.trigger(ACTION.DIALOG_VERSION_OPEN); break;
+            case "help":  store.trigger(ACTION.DIALOG_HELP_OPEN); break;
             case "fit":  store.trigger(ACTION.FIT_TO_CANVAS); break;
             case "import": openFile(); break;
             case "set-dark": store.trigger(ACTION.CHANGE_UI_THEME, "dark"); break;
@@ -174,6 +175,9 @@ const ToolBar = (props: {store: Store;}) => {
                         <NavDropdown.Divider />
                     </>
                 )}
+                <NavDropdown.Item eventKey="help">
+                    Keyboard Shortcuts Help
+                </NavDropdown.Item>
                 <NavDropdown.Item eventKey="version">
                     Version information
                 </NavDropdown.Item>
@@ -200,12 +204,12 @@ const ToolBar = (props: {store: Store;}) => {
     const renderSearchBox = () => (
         // 検索ボックス
         <Nav className="ms-auto">
-            <div style={{ paddingRight: "8px" }}>
-                <InputGroup size="sm" style={{ width: "250px" }}>
+            <div style={{ paddingRight: "12px" }}>
+                <InputGroup size="sm" style={{ width: "180px" }}>
                     <FormControl
                         className={`search-input ${theme === "dark" ? "dark" : "light"}`}
                         ref={searchInputRef}
-                        placeholder="Search nodes... (Press '/' to focus)"
+                        placeholder="Search nodes"
                         value={searchQuery}
                         onChange={handleSearchInputChange}
                         onKeyDown={handleSearchKeyDown}
@@ -312,7 +316,11 @@ const VersionDialog = (props: {store: Store;}) => {
     const handleClose = () => {setShow(false)};
     
     useEffect(() => { // マウント時
-        props.store.on(CHANGE.DIALOG_VERSION_OPEN, () => {setShow(true)});
+        const openListener = () => setShow(true);
+        props.store.on(CHANGE.DIALOG_VERSION_OPEN, openListener);
+        return () => {
+            props.store.off(CHANGE.DIALOG_VERSION_OPEN, openListener);
+        };
     }, []);
     
     return (
@@ -324,6 +332,57 @@ const VersionDialog = (props: {store: Store;}) => {
         </Modal>
     );
 };
+
+
+const HelpDialog = (props: { store: Store }) => {
+    const [show, setShow] = useState(false);
+    const handleClose = () => setShow(false);
+
+    useEffect(() => {
+        const openListener = () => setShow(true);
+        props.store.on(CHANGE.DIALOG_HELP_OPEN, openListener);
+        return () => {
+            props.store.off(CHANGE.DIALOG_HELP_OPEN, openListener);
+        };
+    }, [props.store]);
+
+    return (
+        <Modal show={show} onHide={handleClose}>
+            <Modal.Header closeButton>
+                <Modal.Title>Help</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                {(() => {
+                    const rowStyle = {
+                        display: "grid",
+                        gridTemplateColumns: "12ch 1fr",
+                        columnGap: "1rem",
+                        marginBottom: "0.5rem",
+                        alignItems: "start",
+                    };
+                    const listStyle = { listStyle: "none", padding: 0, margin: 0 };
+                    const kbdStyle = { justifySelf: "end" };
+
+                    return (
+                        <ul style={listStyle}>
+                            <li style={rowStyle}>
+                                <kbd style={kbdStyle}>Mouse wheel</kbd>
+                                <span>Zoom in/out.</span>
+                            </li>
+                            <li style={rowStyle}>
+                                <kbd style={kbdStyle}>/</kbd>
+                                <span>Focus the search box</span>
+                            </li>
+                        </ul>
+                    );
+                })()}
+            </Modal.Body>
+
+        </Modal>
+    );
+};
+
+
 
 const ContextMenu = (props: {
     store: Store;
@@ -464,4 +523,4 @@ const Breadcrumb = (props: {store: Store;}) => {
     );
 };
 
-export {ToolBar, StatusBar, VersionDialog, ContextMenu, Breadcrumb};
+export {ToolBar, StatusBar, VersionDialog, ContextMenu, Breadcrumb, HelpDialog};

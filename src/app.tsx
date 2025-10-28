@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import Store, { ACTION, CHANGE } from "./store";
 
-import {StatusBar, ToolBar, VersionDialog, ContextMenu, Breadcrumb} from "./ui_parts";
+import {StatusBar, ToolBar, VersionDialog, ContextMenu, Breadcrumb, HelpDialog} from "./ui_parts";
 import TreeMapCanvas from "./tree_map_canvas";
 
 import { Modal } from "react-bootstrap";
@@ -84,6 +84,7 @@ const App = () => {
                 <StatusBar store={storeRef.current}/>
             </div>
             <VersionDialog store={storeRef.current}/>
+            <HelpDialog store={storeRef.current} />
             <ContextMenu 
                 store={storeRef.current}
                 show={contextMenu.show}

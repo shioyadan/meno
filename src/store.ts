@@ -12,6 +12,7 @@ enum ACTION {
     CANVAS_ZOOM_OUT,
     MODE_CHANGE,
     DIALOG_VERSION_OPEN,
+    DIALOG_HELP_OPEN,
     FIT_TO_CANVAS,
     CHANGE_UI_THEME,
     SET_ROOT_NODE,
@@ -33,6 +34,7 @@ enum CHANGE {
     CANVAS_ZOOM_OUT,
     CANVAS_POINTER_CHANGED,
     DIALOG_VERSION_OPEN,
+    DIALOG_HELP_OPEN,
     FIT_TO_CANVAS,
     CHANGE_UI_THEME,
     ROOT_NODE_CHANGED,
@@ -124,6 +126,7 @@ class Store {
         this.on(ACTION.CANVAS_ZOOM_IN, () => { this.trigger(CHANGE.CANVAS_ZOOM_IN); });
         this.on(ACTION.CANVAS_ZOOM_OUT, () => { this.trigger(CHANGE.CANVAS_ZOOM_OUT); });
         this.on(ACTION.DIALOG_VERSION_OPEN, () => { this.trigger(CHANGE.DIALOG_VERSION_OPEN); });
+        this.on(ACTION.DIALOG_HELP_OPEN, () => { this.trigger(CHANGE.DIALOG_HELP_OPEN); });
         this.on(ACTION.FIT_TO_CANVAS, () => {this.trigger(CHANGE.FIT_TO_CANVAS);}); 
         this.on(ACTION.CHANGE_UI_THEME, (theme: string) => {
             this.uiTheme = theme;
@@ -203,7 +206,22 @@ class Store {
         this.handlers_[event].push(handler);
         // console.log(`on() is called {event: ${event}, handler: ${handler}}`);
     }
-
+    
+    off(event: CHANGE | ACTION, handler?: (...args: any[]) => void): void {
+        if (!(event in CHANGE || event in ACTION)) {
+            console.warn(`Unknown event ${event}`);
+            return;
+        }
+        const list = this.handlers_[event];
+        if (!list || list.length === 0) {
+            return;
+        }
+        if (handler) {
+            this.handlers_[event] = list.filter(h => h !== handler);
+        } else {
+            delete this.handlers_[event];
+        }
+    }
     trigger(event: CHANGE|ACTION, ...args: any[]) {
         if (!(event in CHANGE || event in ACTION)) {
             console.log(`Unknown event ${event}`);
