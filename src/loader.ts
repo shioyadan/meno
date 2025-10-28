@@ -50,10 +50,14 @@ class Loader {
         loadLocal(drivers);
     }
 
-    fileNodeToStr(fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean) {
-        return this.driver_ ? this.driver_.fileNodeToStr(fileNode, rootNode, isSizeMode) : "";
+    fileNodeToStr(fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean, detailed: boolean) {
+        return this.driver_ ? this.driver_.fileNodeToStr(fileNode, rootNode, isSizeMode, detailed) : "";
     }
-    
+  
+    itemNames() {
+        return this.driver_ ? this.driver_.itemNames() : [];
+    }
+
 };
 
 export { FileReader, Loader, DataNode as FileNode };

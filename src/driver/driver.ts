@@ -9,10 +9,17 @@ class DataNode {
     children: Record<string, DataNode>|null = {};
     parent: DataNode | null = null;
     key = "";  // ノードに対応するファイル名
-    size = 0;
     fileCount = 1;
     isDirectory = false;
     id = -1;
+
+    get size() {
+        return this.data[0];
+    }
+    set size(s: number) {
+        this.data[0] = s;
+    }
+    data: number[] = [0]; 
 
     constructor() {
     }
@@ -69,10 +76,8 @@ const getRootSize = (fileNode: DataNode): number => {
     return cur.size;
 };
 
-const fileNodeToStr = (fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean, unit: string = "") => {
-
+const formatNumberCompact = (num: number): string => {
     let str = "";
-    const num = fileNode.size;
     if (num > 1000 * 1000 * 1000) {
         str = (num / 1000 / 1000 / 1000).toFixed(2) + "G";
     } else if (num > 1000 * 1000) {
@@ -82,12 +87,16 @@ const fileNodeToStr = (fileNode: DataNode, rootNode: DataNode, isSizeMode: boole
     } else {
         str = "" + num;
     }
+    return str;
+}
+
+const fileNodeToStr = (fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean, unit: string = "") => {
 
     const rootSize = rootNode.size;
     const percentage =
         rootSize > 0 ? ((fileNode.size / rootSize) * 100).toFixed(2) : "0.00";
 
-    return ` [${str} ${unit}, ${percentage}%]`;
+    return ` [${formatNumberCompact(fileNode.size)} ${unit}, ${percentage}%]`;
 }
 
 // 祖先の重複を排除して合計サイズを出す
@@ -107,5 +116,5 @@ const calcDedupedTotalSize = (results: DataNode[] = []) => {
 };
 
 export { FileReader, DataNode, FinishCallback, 
-    ProgressCallback, ErrorCallback, CloseHandler, ReadLineHandler, fileNodeToStr, getRootSize, calcDedupedTotalSize };
+    ProgressCallback, ErrorCallback, CloseHandler, ReadLineHandler, fileNodeToStr, getRootSize, calcDedupedTotalSize, formatNumberCompact };
 

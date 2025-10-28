@@ -1,4 +1,4 @@
-import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback, fileNodeToStr } from "./driver";
+import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback, fileNodeToStr, formatNumberCompact } from "./driver";
 
 class DC_AreaDriver {
 
@@ -56,9 +56,11 @@ class DC_AreaDriver {
             }
 
             const nodeNames = instance.split(/[\/]/);
-            // const nodeSize = Math.floor(Number(words[1]));    // Cell area
-            const nodeSize = Number(words[1]);    // Cell area
-            
+            const absTotal = Number(words[1]);    // Cell area
+            const combArea = Number(words[3]);
+            const nonCombArea = Number(words[4]);
+            const blackBoxArea = Number(words[5]);
+
             // 目的となるノードを探す
             let node = tree;
             for (let i of nodeNames) {
@@ -75,6 +77,7 @@ class DC_AreaDriver {
                         n.key = j;
                         n.parent = node;
                         n.id = nextID;
+                        n.data = [0, 0, 0, 0]; // 子ノードのデータを初期化
                         node.children[j] = n;
                         pseudoMap[n.id] =
                             subNodeNames.length > 1 && j != subNodeNames[subNodeNames.length-1]; // ドットで区切ったときは pseudo node
@@ -83,31 +86,35 @@ class DC_AreaDriver {
                     node = node.children[j];
                 }
             }
-            node.size = nodeSize;
+            node.data[0] = absTotal;
+            node.data[1] = combArea;
+            node.data[2] = nonCombArea;
+            node.data[3] = blackBoxArea;
         });
 
         reader.onClose(() => {
             function finalize(node: DataNode) {
                 // 各ノードが子供全員のサイズを含んでいるので，子供分を引いていく
+                // total 以外は子供サイズをもともと含まないので引かない
                 let size = 0;
                 for (let i in node.children) {
                     size += finalize(node.children[i]);
                 }
 
-                let orgSize = node.size;
+                let orgSize = node.data[0];
                 if (node.id in pseudoMap && pseudoMap[node.id]) { 
                     // ドットで区切られているノードは擬似ノードなので，子のサイズを含まない
                     // 擬似ノードの場合，子供サイズをそのまま返す
-                    node.size = size;
+                    node.data[0] = size;
                     return size;
                 }
                 else {
                     // 子のサイズを引いた後に，残りがあれば others ノードを作成
-                    // node.size -= size;
-                    let remainingSize = node.size - size;
+                    // node.data[0] -= size;
+                    let remainingSize = node.data[0] - size;
                     if (node.children && Object.keys(node.children).length != 0 && remainingSize > 0) {
                         let n = new DataNode();
-                        n.size = remainingSize;
+                        n.data = [remainingSize, 0, 0, 0]; // others ノードも data を持つ
                         n.key = "others";
                         n.parent = node;
                         n.id = nextID;
@@ -130,8 +137,21 @@ class DC_AreaDriver {
         reader.load();
     }
 
-    fileNodeToStr(fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean) {
-        return fileNodeToStr(fileNode, rootNode, isSizeMode);
+    fileNodeToStr(fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean, detailed: boolean) {
+        const rootSize = rootNode.size;
+        const percentage =
+            rootSize > 0 ? ((fileNode.size / rootSize) * 100).toFixed(2) : "0.00";
+
+        const fmt = formatNumberCompact;
+        if (detailed) {
+            return ` [total: ${fmt(fileNode.size)} (${percentage}%), comb: ${fmt(fileNode.data[1])}, non-comb: ${fmt(fileNode.data[2])}, black-box: ${fmt(fileNode.data[3])}]`;
+        } else {
+            return ` [${fmt(fileNode.size)} (${percentage}%)]`;
+        }
+    }
+
+    itemNames() {
+        return ["total", "comb", "non-comb", "black-box"];
     }
 };
 

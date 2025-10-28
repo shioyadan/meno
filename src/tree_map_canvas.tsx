@@ -360,7 +360,7 @@ const TreeMapCanvas = (props: {
             virtualHeight,
             [ctx.viewPoint[0], ctx.viewPoint[1], ctx.viewPoint[0] + width, ctx.viewPoint[1] + height],
             ctx.isSizeMode,
-            (fileNode, isSizeMode) => props.store.fileNodeToStr(fileNode, isSizeMode),
+            (fileNode, isSizeMode) => props.store.fileNodeToStr(fileNode, isSizeMode, false),
             props.store.uiTheme,
             props.store.searchResults
         );

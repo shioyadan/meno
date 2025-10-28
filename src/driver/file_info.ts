@@ -1,4 +1,4 @@
-import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver";
+import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback, formatNumberCompact} from "./driver";
 
 class FileInfoDriver {
 
@@ -18,13 +18,13 @@ class FileInfoDriver {
         let sizeAndCount = [0,0];
         for(let key in tree.children) {
             let val = tree.children[key];
-            if (val.isDirectory && val.children) {
+            if (val.data[2] != 0 && val.children) {
                 let child = this.finalizeTree_(val, progressCallback);
-                val.size = child[0];
-                val.fileCount = child[1];
+                val.data[0] = child[0];
+                val.data[1] = child[1];
             }
-            sizeAndCount[0] += val.size;
-            sizeAndCount[1] += val.fileCount;
+            sizeAndCount[0] += val.data[0];
+            sizeAndCount[1] += val.data[1];
         }
         return sizeAndCount;
     };
@@ -42,6 +42,7 @@ class FileInfoDriver {
         
         reader.onReadLine((line: string) => {
             let node = new DataNode();
+            node.data = [0, 0, 0]; // size, count, isDirectory
 
             // process.stdout.write(`${id}\t${parent}\t${src.key}\t${src.isDirectory?1:0}\t${src.fileCount}\t${src.size}\n`);
             let args = line.split(/\t/);
@@ -57,9 +58,9 @@ class FileInfoDriver {
 
             idToNodeMap[id] = node;
             node.key = args[2];
-            node.isDirectory = Number(args[3]) == 1 ? true : false;
-            node.fileCount = Number(args[4])
-            node.size = Number(args[5]);
+            node.data[2] = Number(args[3]) == 1 ? 1 : 0;    // isDirectory
+            node.data[1] = Number(args[4])
+            node.data[0] = Number(args[5]);
             node.children = null;   // 子供がない場合は null に
 
             // 親 -> 子の接続
@@ -101,11 +102,11 @@ class FileInfoDriver {
 
             setTimeout(() => {
                 let sizeAndCount = this.finalizeTree_(root, progressCallback);
-                root.size = sizeAndCount[0];
-                root.fileCount = sizeAndCount[1];
+                root.data[0] = sizeAndCount[0];
+                root.data[1] = sizeAndCount[1];
     
                 mode = "finalize";
-                this.count = root.fileCount;
+                this.count = root.data[1];
                 progressCallback(root.key);
                 finishCallback(root);
             }, 0);
@@ -113,9 +114,9 @@ class FileInfoDriver {
         reader.load();
     }
 
-    fileNodeToStr(fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean) {
+    fileNodeToStr(fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean, detailed: boolean) {
         let str = "";
-        let num = isSizeMode ? fileNode.size : fileNode.fileCount;
+        let num = fileNode.data[0];
         if (num > 1024*1024*1024) {
             str = "" + Math.ceil(num/1024/1024/1024) + "G";
         }
@@ -128,14 +129,23 @@ class FileInfoDriver {
         else {
             str = "" + num;
         }
-        str += isSizeMode ? "B" : " files";
-    
-        if (isSizeMode && num == 1) {
-            return "";
+        str += "B";
+
+        const rootSize = rootNode.data[0];
+        const percentage =
+            rootSize > 0 ? ((fileNode.data[0] / rootSize) * 100).toFixed(2) : "0.00";
+
+        const fmt = formatNumberCompact;
+        if (detailed) {
+            return ` [size: ${str} (${percentage}%), count: ${fmt(fileNode.data[1])}]`;
+        } else {
+            return ` [${str} (${percentage}%)]`;
         }
-        else {
-            return " [" + str + "]";
-        }
+        
+    }
+
+    itemNames() {
+        return ["size", "count"];
     }
 };
 

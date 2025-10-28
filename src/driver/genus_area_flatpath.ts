@@ -150,7 +150,7 @@ class GenusAreaFlatpathDriver {
         reader.load();
     }
 
-    fileNodeToStr(fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean) {
+    fileNodeToStr(fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean, detailed: boolean) {
         return fileNodeToStr(fileNode, rootNode, isSizeMode);
     }
 };
