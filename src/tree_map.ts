@@ -397,6 +397,95 @@ class TreeMap {
         // file tree からパスを生成
         return self.getPathFromFileNode(fileNode);
     }
+
+    // 指定した DataNode が描画範囲(viewPort)に含まれるかどうかを判定
+    // 範囲チェックは virtualWidth, virtualHeight, viewPort のみで行う
+    isDataNodeInView(fileNode: DataNode, virtualWidth: number, virtualHeight: number, viewPort: ViewPort): boolean {
+        // 内部ユーティリティ
+        function isFullyInside(r: Rect, vp: ViewPort): boolean {
+            return (r[0] >= vp[0] && r[1] >= vp[1] && r[2] <= vp[2] && r[3] <= vp[3]);
+        }
+        function intersects(r: Rect, vp: ViewPort): boolean {
+            return !(r[2] < vp[0] || r[0] > vp[2] || r[3] < vp[1] || r[1] > vp[3]);
+        }
+
+        // fileNode が属するルートを取得（描画時の root_ と異なっても計算可能）
+        let root: DataNode|null = fileNode;
+        while (root && root.parent && root.parent.id !== -1) {
+            root = root.parent;
+        }
+        if (!root) {
+            return false;
+        }
+
+        // ルートの仮想矩形
+        let rect: Rect = [0, 0, virtualWidth, virtualHeight];
+        let aspect = virtualWidth / virtualHeight;
+
+        // ルート自身なら全体矩形
+        if (fileNode === root) {
+            // 交差しなければ子も不可視
+            if (!intersects(rect, viewPort)) return false;
+            // 親が完全に含まれていれば即 true（最適化）
+            if (isFullyInside(rect, viewPort)) return true;
+            // 交差のみで可視
+            return true;
+        }
+
+        // 祖先から対象ノードまでのチェーンを作る（root -> ... -> fileNode）
+        let chain: DataNode[] = [];
+        {
+            let cur: DataNode|null = fileNode;
+            while (cur && cur !== root) {
+                chain.push(cur);
+                cur = cur.parent ?? null;
+            }
+            // 途中で root に辿り着けなかった場合は不可視とする
+            if (!cur) {
+                return false;
+            }
+            chain.reverse();
+        }
+
+        // 各階層で getDivTree の正規化されたエリアを辿って絶対矩形を復元
+        // 親が完全にビューポートに含まれていればその時点で true を返し、
+        // 交差していなければその時点で false を返す（両方とも最適化）
+        let parent: DataNode = root;
+        for (let child of chain) {
+            // 親矩形が交差していなければ子も不可視
+            if (!intersects(rect, viewPort)) {
+                return false;
+            }
+            // 親矩形が完全包含されていれば子は必ず可視
+            if (isFullyInside(rect, viewPort)) {
+                return true;
+            }
+
+            let cache = this.getDivTree(parent, aspect);
+            if (!cache || !cache.areas) {
+                return false;
+            }
+            let key = child.key;
+            let ar = cache.areas[key];
+            // フィルタ（サイズ0など）により領域が存在しない場合は描画対象外
+            if (!ar) {
+                return false;
+            }
+            let w = rect[2] - rect[0];
+            let h = rect[3] - rect[1];
+            // 正規化 -> 絶対座標へ
+            rect = [
+                rect[0] + ar[0] * w,
+                rect[1] + ar[1] * h,
+                rect[0] + ar[2] * w,
+                rect[1] + ar[3] * h
+            ];
+            parent = child;
+        }
+
+        // 最終矩形についての可視判定（交差していれば可視）
+        return intersects(rect, viewPort);
+    }
 }
 export default TreeMap;
 export {TreeMap, AreaEntry, Point, Rect};

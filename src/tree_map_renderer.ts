@@ -56,17 +56,6 @@ class TreeMapRenderer {
         return this.treeMap_.getPathFromFileNode(fileNode);
     };    
 
-    // 指定ノード以下に searchSet の要素が含まれているか（自身を含む）
-    private containsAnyDescendant(node: DataNode|null, searchSet: Set<DataNode>): boolean {
-        if (!node) return false;
-        if (searchSet.has(node)) return true;
-        if (!node.children) return false;
-        for (let k in node.children) {
-            if (this.containsAnyDescendant(node.children[k], searchSet)) return true;
-        }
-        return false;
-    }
-    
     // canvas に対し，tree のファイルツリーを
     // virtualWidth/virtualHeight に対応した大きさの tree map を生成し，
     // そこの上の viewPort を描画する．
@@ -163,6 +152,7 @@ class TreeMapRenderer {
         c.strokeStyle = "#FFD700"; // ゴールド色でハイライト
         for (let a of areas) {
             if (a.fileNode && searchSet.has(a.fileNode)) {
+                searchSet.delete(a.fileNode); // 重複描画防止のため削除
                 let rect = a.rect;
                 c.strokeRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
                 
@@ -172,24 +162,54 @@ class TreeMapRenderer {
             }
         }
 
-        // 末端の矩形（isLeaf）で，子ノードに検索結果が含まれている場合もハイライト
-        // 直接の一致とは色を変える
+        // 子ノードに検索結果が含まれている場合もハイライト
+        // 検索にヒットしたノードが描画範囲にある場合でかつ，小さすぎて描画が省略されている場合，
+        // その祖先ノードもハイライトする
         c.lineWidth = 3;
         c.strokeStyle = "#FFA500"; // 直接一致より少しオレンジ寄り
-        for (let a of areas) {
-            if (!a.fileNode) continue;
-            // 末端の矩形とは，自分の子供のノードがいてもそれらが省略されている場合も含む
-            if (a.isLeaf && a.fileNode.hasChildren && !searchSet.has(a.fileNode)) {
-                if (self.containsAnyDescendant(a.fileNode, searchSet)) {
-                    let rect = a.rect;
-                    c.strokeRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
+        {
+            // すでに描画した親ノードの重複描画を避ける
+            const painted = new Set<DataNode>();
 
-                    // 子に検索結果がいることを示すため，やや弱めのオーバーレイ
-                    c.fillStyle = "rgba(255, 165, 0, 0.20)"; // 半透明のオレンジ
-                    c.fillRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
+            // searchSet の各要素について，その祖先（親を含む）を areas の後ろから探す
+            for (let s of searchSet) {
+
+                if (!self.treeMap_.isDataNodeInView(s, virtualWidth, virtualHeight, viewPort)) {
+                    continue; // ビューポート外なら無視
+                }
+
+                // node.parent をたどって祖先集合を作る（ルート id=0 を含む）
+                const ancestorSet = new Set<DataNode>();
+                let p: DataNode|null|undefined = (s as any).parent;
+                while (p) {
+                    ancestorSet.add(p);
+                    if ((p as any).id === 0) break;
+                    p = (p as any).parent;
+                }
+                // areas を後ろから走査して最初に見つかった祖先 area にだけ描画
+                for (let i = areas.length - 1; i >= 0; i--) {
+                    const a = areas[i];
+                    if (!a.fileNode) continue;
+
+                    if (ancestorSet.has(a.fileNode)) {
+                        if (painted.has(a.fileNode)) {  // 祖先のヒット確認をやった後じゃないと同一階層の別のものが無視される
+                            break; // すでに描画済み
+                        }
+
+                        let rect = a.rect;
+                        c.strokeRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
+
+                        // 子に検索結果がいることを示すため，やや弱めのオーバーレイ
+                        c.fillStyle = "rgba(255, 165, 0, 0.20)"; // 半透明のオレンジ
+                        c.fillRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
+
+                        painted.add(a.fileNode);
+                        break; // painted を使うので，最初に描画した祖先で停止
+                    }
                 }
             }
         }
+
 
         // 文字領域が確保できた場合は描画
         let strAreas = areas.filter((a) => {
