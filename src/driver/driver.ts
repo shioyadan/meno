@@ -13,12 +13,6 @@ class DataNode {
     isDirectory = false;
     id = -1;
 
-    get size() {
-        return this.data[0];
-    }
-    set size(s: number) {
-        this.data[0] = s;
-    }
     data: number[] = [0]; 
 
     constructor() {
@@ -73,7 +67,7 @@ class FileReader {
 const getRootSize = (fileNode: DataNode): number => {
     let cur = fileNode;
     while (cur.parent && cur.parent.id !== -1) cur = cur.parent;
-    return cur.size;
+    return cur.data[0];
 };
 
 const formatNumberCompact = (num: number): string => {
@@ -92,15 +86,15 @@ const formatNumberCompact = (num: number): string => {
 
 const fileNodeToStr = (fileNode: DataNode, rootNode: DataNode, dataIndex: number, unit: string = "") => {
 
-    const rootSize = rootNode.size;
+    const rootSize = rootNode.data[dataIndex];
     const percentage =
-        rootSize > 0 ? ((fileNode.size / rootSize) * 100).toFixed(2) : "0.00";
+        rootSize > 0 ? ((fileNode.data[dataIndex] / rootSize) * 100).toFixed(2) : "0.00";
 
-    return ` [${formatNumberCompact(fileNode.size)} ${unit}, ${percentage}%]`;
+    return ` [${formatNumberCompact(fileNode.data[dataIndex])} ${unit}, ${percentage}%]`;
 }
 
 // 祖先の重複を排除して合計サイズを出す
-const calcDedupedTotalSize = (results: DataNode[] = []) => {
+const calcDedupedTotalSize = (results: DataNode[] = [], dataIndex: number) => {
     if (!results.length) return 0;
     const idSet = new Set<number>(results.map(n => n?.id));
     // 祖先がヒットしていない最上位ノードのみを残す
@@ -112,7 +106,7 @@ const calcDedupedTotalSize = (results: DataNode[] = []) => {
         }
         return true;
     });
-    return topLevel.reduce((acc, n) => acc + (n?.size || 0), 0);
+    return topLevel.reduce((acc, n) => acc + (n?.data[dataIndex] || 0), 0);
 };
 
 export { FileReader, DataNode, FinishCallback, 

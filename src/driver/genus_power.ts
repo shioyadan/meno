@@ -107,7 +107,7 @@ class GenusPowerFlatpathDriver {
             }
 
             // 葉に Total を加算（同一インスタンスが複数回出た場合を考慮して加算）
-            node.size = (node.size || 0) + totalVal;
+            node.data[0] = (node.data[0] || 0) + totalVal;
             sawData = true;
 
             // 進捗コール
@@ -126,11 +126,11 @@ class GenusPowerFlatpathDriver {
                     }
                 }
 
-                const orgSize = node.size || 0;
+                const orgSize = node.data[0] || 0;
 
                 if (node.id && pseudoMap[node.id]) {
                     // 擬似ノードは子サイズの合計＝自身のサイズ
-                    node.size = childSum;
+                    node.data[0] = childSum;
                     return childSum;
                 } else {
                     // 非擬似ノードは「自身（org）＝そのノードのトータル」と扱う
@@ -138,7 +138,7 @@ class GenusPowerFlatpathDriver {
                     const remaining = orgSize - childSum;
                     if (node.children && Object.keys(node.children).length !== 0 && remaining > 0) {
                         const n = new DataNode();
-                        n.size = remaining;
+                        n.data[0] = remaining;
                         n.key = "others";
                         n.parent = node;
                         n.id = (nextID++);

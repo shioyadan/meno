@@ -55,9 +55,9 @@ class TreeMap {
     }
 
     getCriteria(fileNode: DataNode) {
-        // if (!fileNode) {
-        //     console.log("fileNode is null");
-        // }
+        if (!fileNode) {
+            console.log("fileNode is null");
+        }
         return fileNode.data[fileNode.data.length > this.cachedDataIndex ? this.cachedDataIndex : 0];
     }
 

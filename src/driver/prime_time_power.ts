@@ -148,7 +148,7 @@ class PrimeTimePowerDriver {
             node.key = key;
             node.parent = parentNode;
             node.id = nextID++;
-            node.size = totalPower; // ノードサイズは Total Power
+            node.data[0] = totalPower; // ノードサイズは Total Power
 
             parentNode.children[key] = node;
 
@@ -168,11 +168,11 @@ class PrimeTimePowerDriver {
                         sum += finalize(node.children[k]);
                     }
                 }
-                const org = node.size ?? 0;
+                const org = node.data[0] ?? 0;
                 const remaining = org - sum;
                 if (node.children && Object.keys(node.children).length !== 0 && remaining > 0) {
                     const n = new DataNode();
-                    n.size = remaining;
+                    n.data[0] = remaining;
                     n.key = "others";
                     n.parent = node;
                     n.id = nextID++;

@@ -72,8 +72,17 @@ const TreeMapCanvas = (props: {
         store.on(CHANGE.CANVAS_ZOOM_OUT, () => {
             startZoomInOrOut(false, canvas.offsetWidth / 2, canvas.offsetHeight / 2);
         });
-        store.on(CHANGE.TREE_LOADED, draw);
+        store.on(CHANGE.TREE_LOADED, () => {
+            ctx.dataIndex = store.dataIndex;
+            draw();
+        });    
         store.on(CHANGE.CHANGE_UI_THEME, draw);    
+
+        store.on(CHANGE.CHANGE_DATA_INDEX, () => {
+            ctx.dataIndex = store.dataIndex;
+            draw();
+        });    
+
         store.on(CHANGE.CANVAS_POINTER_CHANGED, draw);    
         store.on(CHANGE.FIT_TO_CANVAS, fitToCanvas);
         store.on(CHANGE.ROOT_NODE_CHANGED, () => {

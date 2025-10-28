@@ -72,7 +72,7 @@ class VivadoAreaDriver {
                     node = node.children[j];
                 }
             }
-            node.size = nodeSize;
+            node.data[0] = nodeSize;
         });
 
         reader.onClose(() => {
@@ -83,20 +83,20 @@ class VivadoAreaDriver {
                     size += finalize(node.children[i]);
                 }
 
-                let orgSize = node.size;
+                let orgSize = node.data[0];
                 if (node.id in pseudoMap && pseudoMap[node.id]) { 
                     // ドットで区切られているノードは擬似ノードなので，子のサイズを含まない
                     // 擬似ノードの場合，子供サイズをそのまま返す
-                    node.size = size;
+                    node.data[0] = size;
                     return size;
                 }
                 else {
                     // 子のサイズを引いた後に，残りがあれば others ノードを作成
                     // node.size -= size;
-                    let remainingSize = node.size - size;
+                    let remainingSize = node.data[0] - size;
                     if (node.children && Object.keys(node.children).length != 0 && remainingSize > 0) {
                         let n = new DataNode();
-                        n.size = remainingSize;
+                        n.data[0] = remainingSize;
                         n.key = "others";
                         n.parent = node;
                         n.id = nextID;

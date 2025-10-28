@@ -37,6 +37,7 @@ enum CHANGE {
     DIALOG_HELP_OPEN,
     FIT_TO_CANVAS,
     CHANGE_UI_THEME,
+    CHANGE_DATA_INDEX,
     ROOT_NODE_CHANGED,
     SEARCH_RESULTS_CHANGED,
 };
@@ -93,6 +94,8 @@ class Store {
 
         this.on(ACTION.FILE_IMPORT, (inputStr: string) => {
             let fileReader = new FileReader(inputStr);
+
+            this.dataIndex = 0; // デフォルトのデータインデックスを設定
 
             this.treeMapRenderer.clear();
             this.loader_.load(

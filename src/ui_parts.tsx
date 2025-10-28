@@ -265,19 +265,19 @@ const StatusBar = (props: {store: Store;}) => {
             setTheme(store.uiTheme);
         });
         store.on(CHANGE.ROOT_NODE_CHANGED, () => {  // ルートノードサイズを更新
-            setRootSize((store.currentRootNode && store.currentRootNode.size) ? store.currentRootNode.size : 0);
+            setRootSize((store.currentRootNode && store.currentRootNode.data[0]) ? store.currentRootNode.data[0] : 0);
         });
         store.on(CHANGE.TREE_LOADED, () => {
-            setRootSize((store.currentRootNode && store.currentRootNode.size) ? store.currentRootNode.size : 0);
+            setRootSize((store.currentRootNode && store.currentRootNode.data[0]) ? store.currentRootNode.data[0] : 0);
         });
         store.on(CHANGE.SEARCH_RESULTS_CHANGED, () => {
             setSearchResultsCount(store.searchResults.length);
             setSearchQuery(store.searchQuery);
             // 親子重複を除外した合計（素の値のまま）
-            const total = calcDedupedTotalSize(store.searchResults || []);
+            const total = calcDedupedTotalSize(store.searchResults || [], 0);
             setSearchTotalSize(total);
         });
-        setRootSize((store.currentRootNode && store.currentRootNode.size) ? store.currentRootNode.size : 0);
+        setRootSize((store.currentRootNode && store.currentRootNode.data[0]) ? store.currentRootNode.data[0] : 0);
     }, []);
 
     const toPercent = (part: number, whole: number): string => {

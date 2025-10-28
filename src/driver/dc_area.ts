@@ -138,15 +138,15 @@ class DC_AreaDriver {
     }
 
     fileNodeToStr(fileNode: DataNode, rootNode: DataNode, dataIndex: number, detailed: boolean) {
-        const rootSize = rootNode.size;
+        const rootSize = rootNode.data[0];
         const percentage =
-            rootSize > 0 ? ((fileNode.size / rootSize) * 100).toFixed(2) : "0.00";
+            rootSize > 0 ? ((fileNode.data[dataIndex] / rootSize) * 100).toFixed(2) : "0.00";
 
         const fmt = formatNumberCompact;
         if (detailed) {
-            return ` [total: ${fmt(fileNode.size)} (${percentage}%), comb: ${fmt(fileNode.data[1])}, non-comb: ${fmt(fileNode.data[2])}, black-box: ${fmt(fileNode.data[3])}]`;
+            return ` [total: ${fmt(fileNode.data[0])} (${percentage}%), comb: ${fmt(fileNode.data[1])}, non-comb: ${fmt(fileNode.data[2])}, black-box: ${fmt(fileNode.data[3])}]`;
         } else {
-            return ` [${fmt(fileNode.size)} (${percentage}%)]`;
+            return ` [${fmt(fileNode.data[0])} (${percentage}%)]`;
         }
     }
 
