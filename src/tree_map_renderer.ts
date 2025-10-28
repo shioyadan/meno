@@ -1,7 +1,7 @@
 import TreeMap, { AreaEntry, Rect, Point } from "./tree_map";
-import {FileNode} from "./loader";
+import {DataNode} from "./loader";
 
-type FileNodeToStrFunction = (fileNode: FileNode, isSizeMode: boolean) => string;
+type FileNodeToStrFunction = (fileNode: DataNode, isSizeMode: boolean) => string;
 type ThemeName = "dark" | "light";
 
 type Theme = {
@@ -52,12 +52,12 @@ class TreeMapRenderer {
         return this.treeMap_.getFileNodeFromPoint(pos);
     };
 
-    getPathFromFileNode(fileNode: FileNode) {
+    getPathFromFileNode(fileNode: DataNode) {
         return this.treeMap_.getPathFromFileNode(fileNode);
     };    
 
     // 指定ノード以下に searchSet の要素が含まれているか（自身を含む）
-    private containsAnyDescendant(node: FileNode|null, searchSet: Set<FileNode>): boolean {
+    private containsAnyDescendant(node: DataNode|null, searchSet: Set<DataNode>): boolean {
         if (!node) return false;
         if (searchSet.has(node)) return true;
         if (!node.children) return false;
@@ -70,9 +70,9 @@ class TreeMapRenderer {
     // canvas に対し，tree のファイルツリーを
     // virtualWidth/virtualHeight に対応した大きさの tree map を生成し，
     // そこの上の viewPort を描画する．
-    render(canvas: HTMLCanvasElement, tree: FileNode|null, pointedFileNode: FileNode|null,
+    render(canvas: HTMLCanvasElement, tree: DataNode|null, pointedFileNode: DataNode|null,
         virtualWidth: number, virtualHeight: number, viewPort: Rect, isSizeMode: boolean,
-        fileNodeToStr: FileNodeToStrFunction, themeName: string, searchResults: FileNode[] = []
+        fileNodeToStr: FileNodeToStrFunction, themeName: string, searchResults: DataNode[] = []
     ) {
         let self = this;
         // let theme = this.THEME["light"];
@@ -159,7 +159,7 @@ class TreeMapRenderer {
         
         // 検索結果のノードをハイライト
         c.lineWidth = 4; 
-        const searchSet = new Set<FileNode>(searchResults);
+        const searchSet = new Set<DataNode>(searchResults);
         c.strokeStyle = "#FFD700"; // ゴールド色でハイライト
         for (let a of areas) {
             if (a.fileNode && searchSet.has(a.fileNode)) {

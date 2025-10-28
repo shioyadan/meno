@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import Store, { ACTION, CHANGE } from "./store";
-import { FileNode } from "./loader";
+import { DataNode } from "./loader";
 import { calcDedupedTotalSize } from "./driver/driver";
 
 import { fileOpen } from "browser-fs-access";
@@ -389,7 +389,7 @@ const ContextMenu = (props: {
     show: boolean;
     x: number;
     y: number;
-    targetNode: FileNode | null;
+    targetNode: DataNode | null;
     onClose: () => void;
 }) => {
     const { store, show, x, y, targetNode, onClose } = props;
@@ -462,7 +462,7 @@ const ContextMenu = (props: {
 
 const Breadcrumb = (props: {store: Store;}) => {
     const { store } = props;
-    const [breadcrumbPath, setBreadcrumbPath] = useState<FileNode[]>([]);
+    const [breadcrumbPath, setBreadcrumbPath] = useState<DataNode[]>([]);
     const [theme, setTheme] = useState(store.uiTheme);
 
     useEffect(() => {
@@ -472,7 +472,7 @@ const Breadcrumb = (props: {store: Store;}) => {
         setBreadcrumbPath(store.getBreadcrumbPath());   // 初期値を設定
     }, []);
 
-    const handleBreadcrumbClick = (node: FileNode) => {
+    const handleBreadcrumbClick = (node: DataNode) => {
         if (node !== store.currentRootNode) {
             store.trigger(ACTION.SET_ROOT_NODE, node);
         }

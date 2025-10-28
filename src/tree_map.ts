@@ -1,7 +1,7 @@
 //
 // baseAspectX/baseAspectY: 生成するツリーマップ絶対のアスペクト比
 //
-import {FileNode} from "./loader";
+import {DataNode} from "./loader";
 
 type Point = [number, number];
 type Rect = [number, number, number, number];
@@ -10,7 +10,7 @@ type ViewPort = Rect;
 type AreasMap = Record<string, Rect>;
 
 class DivNode {
-    fileNode: FileNode|null = null;
+    fileNode: DataNode|null = null;
     children: DivNode[]|null = [];
     size = 0;
     key = "";
@@ -32,7 +32,7 @@ interface AreaEntry {
     key: string;
     rect: Rect;
     level: number;
-    fileNode: FileNode|null;
+    fileNode: DataNode|null;
     // 末端の矩形かどうか（子が存在しても省略されている場合は true）
     isLeaf: boolean;
 }
@@ -43,7 +43,7 @@ class TreeMap {
     /** @type {} */
     treeMapCache_: Record<string,TreeMapCacheEntry> = {}; // ファイルパスから分割情報へのキャッシュ
     areas_: AreaEntry[]|null = null; // 生成済み領域情報
-    root_: FileNode|null = null;
+    root_: DataNode|null = null;
     
     constructor() {
     }
@@ -54,7 +54,7 @@ class TreeMap {
         this.root_ = null;
     }
 
-    getCriteria(fileNode: FileNode) {
+    getCriteria(fileNode: DataNode) {
         // if (!fileNode) {
         //     console.log("fileNode is null");
         // }
@@ -62,7 +62,7 @@ class TreeMap {
     }
 
     // ファイルノードからパスを得る
-    getPathFromFileNode(fileNode: FileNode){
+    getPathFromFileNode(fileNode: DataNode){
         // file tree からパスを生成
         let path: string|null = fileNode?.key ?? null;
         let f = fileNode?.parent ?? null;
@@ -76,7 +76,7 @@ class TreeMap {
 
     // キャッシュされたバイナリツリーを得る
     // キャッシュは fileTree 内部に直に保持される
-    getDivTree(fileNode: FileNode, aspectRatio: number){
+    getDivTree(fileNode: DataNode, aspectRatio: number){
         let self = this;
 
         // アスペクト比が大きく変わった場合，キャッシュを無効化
@@ -144,9 +144,9 @@ class TreeMap {
     // このバイナリツリーは各ノードにおける左右の大きさ（ファイル容量の合計）
     // がなるべくバランスするようにしてある．これによってタイルのアスペクト比
     // が小さくなる･･･ と思う
-    makeDivTree(fileNode: FileNode) {
+    makeDivTree(fileNode: DataNode) {
 
-        let fileChildren: Record<string, FileNode> = fileNode.children ?? {};
+        let fileChildren: Record<string, DataNode> = fileNode.children ?? {};
         let keys = Object.keys(fileChildren);
 
         // 空ディレクトリ or 容量0のファイルははずしておかないと無限ループする
@@ -154,7 +154,7 @@ class TreeMap {
             return !(this.getCriteria(fileChildren[key]) <= 0);
         });
         // フィルタ結果を反映させる
-        let fileChildrenFiltered: Record<string, FileNode> = {};
+        let fileChildrenFiltered: Record<string, DataNode> = {};
         for (let key of keys) {
             fileChildrenFiltered[key] = fileChildren[key];
         }
@@ -171,7 +171,7 @@ class TreeMap {
         // 再帰的にツリーを作成
         // 渡された node の中身を書き換える必要があるので注意
         let self = this;
-        function makeDivNode(divNode: DivNode, fileNames: string[], fileChildren: Record<string,FileNode>) {
+        function makeDivNode(divNode: DivNode, fileNames: string[], fileChildren: Record<string,DataNode>) {
 
             // 末端
             if (fileNames.length <= 1) {
@@ -255,7 +255,7 @@ class TreeMap {
 
     // 描画領域の作成
     createTreeMap(
-        fileNode: FileNode, virtWidth: number, virtHeight: number, 
+        fileNode: DataNode, virtWidth: number, virtHeight: number, 
         viewPort: ViewPort, margin: Margin, isSizeMode: boolean
     ) {
         let self = this;
@@ -267,7 +267,7 @@ class TreeMap {
             self.treeMapCache_ = {};
         }
 
-        function traverse(fileNode: FileNode, areas: AreaEntry[], virtRect: Rect, level: number) {
+        function traverse(fileNode: DataNode, areas: AreaEntry[], virtRect: Rect, level: number) {
             let cache = self.getDivTree(fileNode, virtWidth/virtHeight);
             let width = virtRect[2] - virtRect[0];
             let height = virtRect[3] - virtRect[1];
@@ -360,14 +360,14 @@ class TreeMap {
     };
 
     // 座標からその場所のパスを得る
-    getFileNodeFromPoint(pos: Point) : FileNode|null{
+    getFileNodeFromPoint(pos: Point) : DataNode|null{
         let self = this;
         if (!self.areas_) {
             return null;
         }
 
         // 逆順にみていく
-        let fileNode: FileNode|null = null;
+        let fileNode: DataNode|null = null;
         for (let i = self.areas_.length - 1; i >= 0; i--) {
             let r = self.areas_[i].rect;
             if (r[0] < pos[0] && pos[0] < r[2] && 

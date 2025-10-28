@@ -1,10 +1,10 @@
 import React, { useRef, useEffect } from "react";
 import Store, { ACTION, CHANGE } from "./store";
-import { FileNode } from "./loader";
+import { DataNode } from "./loader";
 
 class TreeMapCanvasContext {
     BASE_SIZE: [number, number] = [0, 0];
-    tree: FileNode|null = null;
+    tree: DataNode|null = null;
     isSizeMode = true;
     zoomLevel = 0;
     viewPoint: [number, number] = [0, 0];
@@ -36,7 +36,7 @@ class TreeMapCanvasContext {
 
 const TreeMapCanvas = (props: {
     store: Store;
-    onContextMenu?: (x: number, y: number, targetNode: FileNode) => void;
+    onContextMenu?: (x: number, y: number, targetNode: DataNode) => void;
 }) => {
     const store = props.store;
     const contextRef = useRef(new TreeMapCanvasContext);

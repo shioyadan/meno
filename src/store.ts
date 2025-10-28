@@ -1,4 +1,4 @@
-import {Loader, FileReader, FileNode} from "./loader";
+import {Loader, FileReader, DataNode} from "./loader";
 import TreeMapRenderer from "./tree_map_renderer";
 
 enum ACTION {
@@ -47,13 +47,13 @@ class Store {
 
     // レンダラ
     treeMapRenderer: TreeMapRenderer;
-    tree: FileNode|null = null;
-    originalTree: FileNode|null = null; // 元のツリーを保持
-    currentRootNode: FileNode|null = null; // 現在のルートノード
+    tree: DataNode|null = null;
+    originalTree: DataNode|null = null; // 元のツリーを保持
+    currentRootNode: DataNode|null = null; // 現在のルートノード
 
     // canvas におけるマウスポインタの位置
     pointedPath: string = "";
-    pointedFileNode: FileNode|null = null;
+    pointedFileNode: DataNode|null = null;
 
     // UI color theme
     uiTheme = "dark";
@@ -63,21 +63,21 @@ class Store {
 
     // 検索機能
     searchQuery: string = "";
-    searchResults: FileNode[] = [];
+    searchResults: DataNode[] = [];
 
 
-    fileNodeToStr(fileNode: FileNode, isSizeMode: boolean, detailed: boolean): string {
+    fileNodeToStr(fileNode: DataNode, isSizeMode: boolean, detailed: boolean): string {
         return this.loader_ ? this.loader_.fileNodeToStr(fileNode, this.currentRootNode ? this.currentRootNode : fileNode, isSizeMode, detailed) : "";
     }
 
     // パンくずリストのパス配列を取得
-    getBreadcrumbPath(): FileNode[] {
+    getBreadcrumbPath(): DataNode[] {
         if (!this.currentRootNode || !this.originalTree) {
             return [];
         }
 
-        const path: FileNode[] = [];
-        let current: FileNode | null = this.currentRootNode;
+        const path: DataNode[] = [];
+        let current: DataNode | null = this.currentRootNode;
         
         while (current) {
             path.unshift(current);
@@ -133,7 +133,7 @@ class Store {
             this.trigger(CHANGE.CHANGE_UI_THEME);
         });
 
-        this.on(ACTION.SET_ROOT_NODE, (nodeToSetAsRoot: FileNode) => {
+        this.on(ACTION.SET_ROOT_NODE, (nodeToSetAsRoot: DataNode) => {
             if (nodeToSetAsRoot && nodeToSetAsRoot.children) {
                 this.currentRootNode = nodeToSetAsRoot;
                 this.tree = nodeToSetAsRoot;
@@ -172,15 +172,15 @@ class Store {
     }
 
     // ノード名で検索する関数
-    searchNodesByName(query: string): FileNode[] {
+    searchNodesByName(query: string): DataNode[] {
         if (!this.tree || !query.trim()) {
             return [];
         }
 
-        const results: FileNode[] = [];
+        const results: DataNode[] = [];
         const searchTerm = query.toLowerCase();
 
-        const searchRecursive = (node: FileNode) => {
+        const searchRecursive = (node: DataNode) => {
             if (node.key.toLowerCase().includes(searchTerm)) {
                 results.push(node);
             }

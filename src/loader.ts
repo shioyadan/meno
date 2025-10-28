@@ -60,4 +60,4 @@ class Loader {
 
 };
 
-export { FileReader, Loader, DataNode as FileNode };
+export { FileReader, Loader, DataNode };
