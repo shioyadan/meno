@@ -96,6 +96,7 @@ class Store {
             let fileReader = new FileReader(inputStr);
 
             this.dataIndex = 0; // デフォルトのデータインデックスを設定
+            this.searchResults = [];
 
             this.treeMapRenderer.clear();
             this.loader_.load(
@@ -104,6 +105,7 @@ class Store {
                     this.tree = tree;
                     this.originalTree = tree; // 元のツリーを保存
                     this.currentRootNode = tree; // 初期状態では元のツリーがルート
+                    this.trigger(ACTION.SEARCH_NODES, this.searchQuery); // 検索結果を更新
                     this.trigger(CHANGE.TREE_LOADED);
                 },
                 (filePath)  => { // 読み込み状態の更新
