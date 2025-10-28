@@ -6,21 +6,22 @@ import TreeMapCanvas from "./tree_map_canvas";
 
 import { Modal } from "react-bootstrap";
 
-let store = new Store();
 
 const App = () => {
+    const storeRef = useRef(new Store());
     const [contextMenu, setContextMenu] = useState({
         show: false,
         x: 0,
         y: 0,
         targetNode: null as any
     });
+    const divRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => { // マウント時
         // もし埋め込みのデフォルトデータが存在する場合はそれを読み込む
         const data = (window as any).MENO_INITIAL_LOADING_DATA;
         if (data && data != "" && !data.includes("__MENO_INITIAL_LOADING_DATA_PLACE_HOLDER__")) {
-            store.trigger(ACTION.FILE_IMPORT, data);
+            storeRef.current.trigger(ACTION.FILE_IMPORT, data);
         }
 
         // コンテキストメニューを閉じるためのクリックリスナー
@@ -45,20 +46,46 @@ const App = () => {
         setContextMenu(prev => ({ ...prev, show: false }));
     };
 
+    const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault(); // デフォルト動作を防止（ブラウザがファイルを開かないようにする）
+    };
+
+    const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        const file = event.dataTransfer.files[0]; // ドロップされた最初のファイルを取得
+        if (!file) {
+            // setError("No file dropped");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            storeRef.current.trigger(ACTION.FILE_IMPORT, reader.result as string);   
+        };
+        reader.onerror = () => {
+            // setError("Failed to read the file");
+        };
+        reader.readAsText(file); // ファイルをテキストとして読み込み
+    };
+
     return (
-        <div >
+        <div
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            ref={divRef}
+        >
             {/* // flexDirection: "column" と flexGrow: 1 を使うことで，Canvas が画面いっぱいに広がるようにしている */}
             <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-                <ToolBar store={store}/>
+                <ToolBar store={storeRef.current}/>
                 <div style={{ flexGrow: 1, minHeight: 0, position: "relative" }}>
-                    <TreeMapCanvas store={store} onContextMenu={showContextMenu} />
-                    <Breadcrumb store={store} />
+                    <TreeMapCanvas store={storeRef.current} onContextMenu={showContextMenu} />
+                    <Breadcrumb store={storeRef.current} />
                 </div>
-                <StatusBar store={store}/>
+                <StatusBar store={storeRef.current}/>
             </div>
-            <VersionDialog store={store}/>
+            <VersionDialog store={storeRef.current}/>
             <ContextMenu 
-                store={store}
+                store={storeRef.current}
                 show={contextMenu.show}
                 x={contextMenu.x}
                 y={contextMenu.y}
