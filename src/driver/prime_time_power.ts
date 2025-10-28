@@ -1,4 +1,4 @@
-import { FileReader, FileNode, FinishCallback, ProgressCallback, ErrorCallback, fileNodeToStr } from "./driver";
+import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback, fileNodeToStr } from "./driver";
 
 class PrimeTimePowerDriver {
 
@@ -21,7 +21,7 @@ class PrimeTimePowerDriver {
 
     load(reader: FileReader, finishCallback: FinishCallback, progressCallback: ProgressCallback, errorCallback: ErrorCallback) {
 
-        let tree = new FileNode();
+        let tree = new DataNode();
         let nextID = 1;
 
         let lineNum = 0;
@@ -32,7 +32,7 @@ class PrimeTimePowerDriver {
         let top = "";             // トップ名
 
         // 階層管理スタック（レベル -> FileNode）
-        let stack: FileNode[] = [];
+        let stack: DataNode[] = [];
 
         reader.onReadLine((line: string) => {
             lineNum++;
@@ -132,7 +132,7 @@ class PrimeTimePowerDriver {
 
             // 親決定
             while (stack.length > level) stack.pop();
-            let parentNode: FileNode = stack.length === 0 ? tree : stack[stack.length - 1];
+            let parentNode: DataNode = stack.length === 0 ? tree : stack[stack.length - 1];
             if (parentNode.children == null) parentNode.children = {};
 
             // 同名キーの衝突回避
@@ -144,7 +144,7 @@ class PrimeTimePowerDriver {
             }
 
             // ノード生成
-            const node = new FileNode();
+            const node = new DataNode();
             node.key = key;
             node.parent = parentNode;
             node.id = nextID++;
@@ -161,7 +161,7 @@ class PrimeTimePowerDriver {
 
         reader.onClose(() => {
             // finalize: 親が子の合計を含む前提で残差 > 0 なら others を作る
-            const finalize = (node: FileNode): number => {
+            const finalize = (node: DataNode): number => {
                 let sum = 0;
                 if (node.children) {
                     for (const k in node.children) {
@@ -171,7 +171,7 @@ class PrimeTimePowerDriver {
                 const org = node.size ?? 0;
                 const remaining = org - sum;
                 if (node.children && Object.keys(node.children).length !== 0 && remaining > 0) {
-                    const n = new FileNode();
+                    const n = new DataNode();
                     n.size = remaining;
                     n.key = "others";
                     n.parent = node;
@@ -193,7 +193,7 @@ class PrimeTimePowerDriver {
         reader.load();
     }
 
-    fileNodeToStr(fileNode: FileNode, rootNode: FileNode, isSizeMode: boolean) {
+    fileNodeToStr(fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean) {
         return fileNodeToStr(fileNode, rootNode, isSizeMode);
     }
 

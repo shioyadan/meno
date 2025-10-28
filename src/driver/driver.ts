@@ -1,13 +1,13 @@
-type FinishCallback = (fileNode: FileNode|null) => void;
+type FinishCallback = (fileNode: DataNode|null) => void;
 type ErrorCallback = (errorMessage: string) => void;
 type ProgressCallback = (s: string) => void;
 type ReadLineHandler = (line: string) => void;
 type CloseHandler = () => void;
 
-class FileNode {
+class DataNode {
 
-    children: Record<string, FileNode>|null = {};
-    parent: FileNode | null = null;
+    children: Record<string, DataNode>|null = {};
+    parent: DataNode | null = null;
     key = "";  // ノードに対応するファイル名
     size = 0;
     fileCount = 1;
@@ -63,13 +63,13 @@ class FileReader {
 }
 
 // ルートノードのサイズを取得
-const getRootSize = (fileNode: FileNode): number => {
+const getRootSize = (fileNode: DataNode): number => {
     let cur = fileNode;
     while (cur.parent && cur.parent.id !== -1) cur = cur.parent;
     return cur.size;
 };
 
-const fileNodeToStr = (fileNode: FileNode, rootNode: FileNode, isSizeMode: boolean, unit: string = "") => {
+const fileNodeToStr = (fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean, unit: string = "") => {
 
     let str = "";
     const num = fileNode.size;
@@ -91,7 +91,7 @@ const fileNodeToStr = (fileNode: FileNode, rootNode: FileNode, isSizeMode: boole
 }
 
 // 祖先の重複を排除して合計サイズを出す
-const calcDedupedTotalSize = (results: FileNode[] = []) => {
+const calcDedupedTotalSize = (results: DataNode[] = []) => {
     if (!results.length) return 0;
     const idSet = new Set<number>(results.map(n => n?.id));
     // 祖先がヒットしていない最上位ノードのみを残す
@@ -106,6 +106,6 @@ const calcDedupedTotalSize = (results: FileNode[] = []) => {
     return topLevel.reduce((acc, n) => acc + (n?.size || 0), 0);
 };
 
-export { FileReader, FileNode, FinishCallback, 
+export { FileReader, DataNode, FinishCallback, 
     ProgressCallback, ErrorCallback, CloseHandler, ReadLineHandler, fileNodeToStr, getRootSize, calcDedupedTotalSize };
 

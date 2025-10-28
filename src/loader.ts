@@ -9,7 +9,7 @@ import GenusPowerTotalDriver from "./driver/genus_power";
 let driverList = [FileInfoDriver, DC_AreaDriver, VivadoAreaDriver, GenusAreaFlatpathDriver, GenusAreaHierpathDriver, PrimeTimePowerDriver, GenusPowerTotalDriver];
 
 
-import { FileReader, FileNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver/driver";
+import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver/driver";
 
 class Loader {
     driver_: FileInfoDriver | DC_AreaDriver | null;
@@ -29,7 +29,7 @@ class Loader {
                 let newReader = reader.clone();
                 this.driver_.load(
                     newReader, 
-                    (fileNode: FileNode|null) => {
+                    (fileNode: DataNode|null) => {
                         console.log(`${this.driver_?.constructor.name} successfully loaded the input.`);
                         finishCallback(fileNode);
                     }, 
@@ -50,10 +50,10 @@ class Loader {
         loadLocal(drivers);
     }
 
-    fileNodeToStr(fileNode: FileNode, rootNode: FileNode, isSizeMode: boolean) {
+    fileNodeToStr(fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean) {
         return this.driver_ ? this.driver_.fileNodeToStr(fileNode, rootNode, isSizeMode) : "";
     }
     
 };
 
-export { FileReader, Loader, FileNode };
+export { FileReader, Loader, DataNode as FileNode };

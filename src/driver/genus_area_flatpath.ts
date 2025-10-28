@@ -1,4 +1,4 @@
-import { FileReader, FileNode, FinishCallback, ProgressCallback, ErrorCallback, fileNodeToStr } from "./driver";
+import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback, fileNodeToStr } from "./driver";
 
 class GenusAreaFlatpathDriver {
 
@@ -14,7 +14,7 @@ class GenusAreaFlatpathDriver {
 
     load(reader: FileReader, finishCallback: FinishCallback, progressCallback: ProgressCallback, errorCallback: ErrorCallback) {
 
-        let tree = new FileNode();
+        let tree = new DataNode();
         // ドットで繋がった部分は擬似ノードと見なすため，それの記録 ID->isPseudo
         let pseudoMap: Record<number, boolean> = {};    
         let nextID = 1;
@@ -91,7 +91,7 @@ class GenusAreaFlatpathDriver {
                         node.children = {};
                     }
                     if (!(j in node.children)) {
-                        let n = new FileNode();
+                        let n = new DataNode();
                         n.key = j;
                         n.parent = node;
                         n.id = nextID;
@@ -107,7 +107,7 @@ class GenusAreaFlatpathDriver {
         });
 
         reader.onClose(() => {
-            function finalize(node: FileNode) {
+            function finalize(node: DataNode) {
                 // 各ノードが子供全員のサイズを含んでいるので，子供分を引いていく
                 let size = 0;
                 for (let i in node.children) {
@@ -126,7 +126,7 @@ class GenusAreaFlatpathDriver {
                     // node.size -= size;
                     let remainingSize = node.size - size;
                     if (node.children && Object.keys(node.children).length != 0 && remainingSize > 0) {
-                        let n = new FileNode();
+                        let n = new DataNode();
                         n.size = remainingSize;
                         n.key = "others";
                         n.parent = node;
@@ -150,7 +150,7 @@ class GenusAreaFlatpathDriver {
         reader.load();
     }
 
-    fileNodeToStr(fileNode: FileNode, rootNode: FileNode, isSizeMode: boolean) {
+    fileNodeToStr(fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean) {
         return fileNodeToStr(fileNode, rootNode, isSizeMode);
     }
 };

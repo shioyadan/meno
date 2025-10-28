@@ -1,4 +1,4 @@
-import { FileReader, FileNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver";
+import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver";
 
 class FileInfoDriver {
 
@@ -9,7 +9,7 @@ class FileInfoDriver {
 
     // tree で渡されてくるツリーにおいて，
     // 各ディレクトリが含む合計サイズを計算して適用する
-    finalizeTree_(tree: FileNode, progressCallback: ProgressCallback) {
+    finalizeTree_(tree: DataNode, progressCallback: ProgressCallback) {
         if (this.count % (1024*4) == 0) {
             progressCallback?.(tree.key);
         }
@@ -33,15 +33,15 @@ class FileInfoDriver {
 
         // 各ノードに id をふり，各ノードは自分の親の id をダンプする
         // id=0 は実際には存在しない仮のルートノードとなる
-        let idToNodeMap: Record<number, FileNode> = {};
-        idToNodeMap[0] = new FileNode();
+        let idToNodeMap: Record<number, DataNode> = {};
+        idToNodeMap[0] = new DataNode();
 
         let lineNum = 1;
         let mode = "import";
         let isFileInfo = true;
         
         reader.onReadLine((line: string) => {
-            let node = new FileNode();
+            let node = new DataNode();
 
             // process.stdout.write(`${id}\t${parent}\t${src.key}\t${src.isDirectory?1:0}\t${src.fileCount}\t${src.size}\n`);
             let args = line.split(/\t/);
@@ -113,7 +113,7 @@ class FileInfoDriver {
         reader.load();
     }
 
-    fileNodeToStr(fileNode: FileNode, rootNode: FileNode, isSizeMode: boolean) {
+    fileNodeToStr(fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean) {
         let str = "";
         let num = isSizeMode ? fileNode.size : fileNode.fileCount;
         if (num > 1024*1024*1024) {
