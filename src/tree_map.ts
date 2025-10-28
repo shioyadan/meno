@@ -39,7 +39,7 @@ interface AreaEntry {
 
 class TreeMap {
     cachedAspectRatio_ = 1.0;   // (幅)/(高さ)
-    cachedSizeMode = true; // size で描画するかどうか
+    cachedDataIndex = 0; // どのエントリを参照するか
     /** @type {} */
     treeMapCache_: Record<string,TreeMapCacheEntry> = {}; // ファイルパスから分割情報へのキャッシュ
     areas_: AreaEntry[]|null = null; // 生成済み領域情報
@@ -58,7 +58,7 @@ class TreeMap {
         // if (!fileNode) {
         //     console.log("fileNode is null");
         // }
-        return this.cachedSizeMode ? fileNode.size : fileNode.fileCount;
+        return fileNode.data[fileNode.data.length > this.cachedDataIndex ? this.cachedDataIndex : 0];
     }
 
     // ファイルノードからパスを得る
@@ -256,14 +256,14 @@ class TreeMap {
     // 描画領域の作成
     createTreeMap(
         fileNode: DataNode, virtWidth: number, virtHeight: number, 
-        viewPort: ViewPort, margin: Margin, isSizeMode: boolean
+        viewPort: ViewPort, margin: Margin, dataIndex: number
     ) {
         let self = this;
         self.root_ = fileNode;
         
         // モードが変わった際はキャッシュを破棄
-        if (this.cachedSizeMode != isSizeMode){
-            this.cachedSizeMode = isSizeMode;
+        if (this.cachedDataIndex != dataIndex){
+            this.cachedDataIndex = dataIndex;
             self.treeMapCache_ = {};
         }
 

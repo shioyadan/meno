@@ -58,16 +58,16 @@ class Store {
     // UI color theme
     uiTheme = "dark";
 
-    // Agate 由来で現在は使われていない
-    isSizeMode = true;
+    // 表示データのインデックス
+    dataIndex = 0;
 
     // 検索機能
     searchQuery: string = "";
     searchResults: DataNode[] = [];
 
 
-    fileNodeToStr(fileNode: DataNode, isSizeMode: boolean, detailed: boolean): string {
-        return this.loader_ ? this.loader_.fileNodeToStr(fileNode, this.currentRootNode ? this.currentRootNode : fileNode, isSizeMode, detailed) : "";
+    fileNodeToStr(fileNode: DataNode, dataIndex: number, detailed: boolean): string {
+        return this.loader_ ? this.loader_.fileNodeToStr(fileNode, this.currentRootNode ? this.currentRootNode : fileNode, dataIndex, detailed) : "";
     }
 
     // パンくずリストのパス配列を取得

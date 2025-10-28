@@ -137,7 +137,7 @@ class DC_AreaDriver {
         reader.load();
     }
 
-    fileNodeToStr(fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean, detailed: boolean) {
+    fileNodeToStr(fileNode: DataNode, rootNode: DataNode, dataIndex: number, detailed: boolean) {
         const rootSize = rootNode.size;
         const percentage =
             rootSize > 0 ? ((fileNode.size / rootSize) * 100).toFixed(2) : "0.00";

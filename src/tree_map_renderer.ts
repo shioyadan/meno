@@ -1,7 +1,7 @@
 import TreeMap, { AreaEntry, Rect, Point } from "./tree_map";
 import {DataNode} from "./loader";
 
-type FileNodeToStrFunction = (fileNode: DataNode, isSizeMode: boolean) => string;
+type FileNodeToStrFunction = (fileNode: DataNode, dataIndex: number) => string;
 type ThemeName = "dark" | "light";
 
 type Theme = {
@@ -60,7 +60,7 @@ class TreeMapRenderer {
     // virtualWidth/virtualHeight に対応した大きさの tree map を生成し，
     // そこの上の viewPort を描画する．
     render(canvas: HTMLCanvasElement, tree: DataNode|null, pointedFileNode: DataNode|null,
-        virtualWidth: number, virtualHeight: number, viewPort: Rect, isSizeMode: boolean,
+        virtualWidth: number, virtualHeight: number, viewPort: Rect, dataIndex: number,
         fileNodeToStr: FileNodeToStrFunction, themeName: string, searchResults: DataNode[] = []
     ) {
         let self = this;
@@ -86,7 +86,7 @@ class TreeMapRenderer {
             virtualHeight, 
             viewPort,
             self.TILE_MARGIN,
-            isSizeMode
+            dataIndex
         );
 
         let fillStyle: string[] = [];
@@ -251,12 +251,12 @@ class TreeMapRenderer {
                 }
                 let key = a.key;
                 if (a.fileNode == pointedFileNode && a.fileNode.hasChildren) {
-                    key += "" + fileNodeToStr(a.fileNode, isSizeMode);  // ポイントされてるところだけは表示する
+                    key += "" + fileNodeToStr(a.fileNode, dataIndex);  // ポイントされてるところだけは表示する
                 }
                 c.strokeText(key, pos[0], pos[1]);
     
                 if (!a.fileNode.hasChildren) {
-                    c.strokeText(fileNodeToStr(a.fileNode, isSizeMode), pos[0], pos[1] + self.FONT_SIZE*1.2);
+                    c.strokeText(fileNodeToStr(a.fileNode, dataIndex), pos[0], pos[1] + self.FONT_SIZE*1.2);
                 }
             }
         }
@@ -274,12 +274,12 @@ class TreeMapRenderer {
 
             let key = a.key;
             if (a.fileNode == pointedFileNode && a.fileNode.hasChildren) {
-                key += "" + fileNodeToStr(a.fileNode, isSizeMode);
+                key += "" + fileNodeToStr(a.fileNode, dataIndex);
             }
             c.fillText(key, pos[0], pos[1]);
 
             if (!a.fileNode.hasChildren) {
-                c.fillText(fileNodeToStr(a.fileNode, isSizeMode), pos[0], pos[1] + self.FONT_SIZE*1.2);
+                c.fillText(fileNodeToStr(a.fileNode, dataIndex), pos[0], pos[1] + self.FONT_SIZE*1.2);
             }
         }
     }

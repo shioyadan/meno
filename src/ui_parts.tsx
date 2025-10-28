@@ -259,7 +259,7 @@ const StatusBar = (props: {store: Store;}) => {
     useEffect(() => { // マウント時
         store.on(CHANGE.CANVAS_POINTER_CHANGED, () => {
             if (!store.pointedPath || !store.pointedFileNode) { return;}
-            setStatusBarMessage(store.pointedPath + store.fileNodeToStr(store.pointedFileNode, store.isSizeMode, true));
+            setStatusBarMessage(store.pointedPath + store.fileNodeToStr(store.pointedFileNode, store.dataIndex, true));
         });
         store.on(CHANGE.CHANGE_UI_THEME, () => {
             setTheme(store.uiTheme);

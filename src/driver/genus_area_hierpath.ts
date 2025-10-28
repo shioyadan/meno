@@ -188,8 +188,8 @@ class GenusAreaHierpathDriver {
         reader.load();
     }
 
-    fileNodeToStr(fileNode: DataNode, rootNode: DataNode,isSizeMode: boolean, detailed: boolean) {
-        return fileNodeToStr(fileNode, rootNode, isSizeMode);
+    fileNodeToStr(fileNode: DataNode, rootNode: DataNode, dataIndex: number, detailed: boolean) {
+        return fileNodeToStr(fileNode, rootNode, dataIndex);
     }
 };
 

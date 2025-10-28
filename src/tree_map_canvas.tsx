@@ -5,7 +5,7 @@ import { DataNode } from "./loader";
 class TreeMapCanvasContext {
     BASE_SIZE: [number, number] = [0, 0];
     tree: DataNode|null = null;
-    isSizeMode = true;
+    dataIndex = 0;
     zoomLevel = 0;
     viewPoint: [number, number] = [0, 0];
     curSize: [number, number] = [0, 0];
@@ -359,8 +359,8 @@ const TreeMapCanvas = (props: {
             virtualWidth,
             virtualHeight,
             [ctx.viewPoint[0], ctx.viewPoint[1], ctx.viewPoint[0] + width, ctx.viewPoint[1] + height],
-            ctx.isSizeMode,
-            (fileNode, isSizeMode) => props.store.fileNodeToStr(fileNode, isSizeMode, false),
+            ctx.dataIndex,
+            (fileNode, dataIndex) => props.store.fileNodeToStr(fileNode, dataIndex, false),
             props.store.uiTheme,
             props.store.searchResults
         );

@@ -90,7 +90,7 @@ const formatNumberCompact = (num: number): string => {
     return str;
 }
 
-const fileNodeToStr = (fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean, unit: string = "") => {
+const fileNodeToStr = (fileNode: DataNode, rootNode: DataNode, dataIndex: number, unit: string = "") => {
 
     const rootSize = rootNode.size;
     const percentage =

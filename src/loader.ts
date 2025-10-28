@@ -50,8 +50,8 @@ class Loader {
         loadLocal(drivers);
     }
 
-    fileNodeToStr(fileNode: DataNode, rootNode: DataNode, isSizeMode: boolean, detailed: boolean) {
-        return this.driver_ ? this.driver_.fileNodeToStr(fileNode, rootNode, isSizeMode, detailed) : "";
+    fileNodeToStr(fileNode: DataNode, rootNode: DataNode, dataIndex: number, detailed: boolean) {
+        return this.driver_ ? this.driver_.fileNodeToStr(fileNode, rootNode, dataIndex, detailed) : "";
     }
   
     itemNames() {
