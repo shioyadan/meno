@@ -1,4 +1,4 @@
-import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback, fileNodeToStr } from "./driver";
+import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback, fileNodeToStr, formatNumberCompact } from "./driver";
 
 class GenusAreaFlatpathDriver {
 
@@ -77,7 +77,10 @@ class GenusAreaFlatpathDriver {
 
             const instance = words[0];
             const nodeNames = instance.split(/[\/]/);
-            const nodeSize = Number(words[3]);    // Cell area
+            const cellCount = Number(words[2]);   // Cell count
+            const cellArea = Number(words[3]);    // Cell area
+            const netArea = Number(words[4]);     // Net area
+            const totalArea = Number(words[5]);   // Macro area
                 
             // 目的となるノードを探す
             let node = tree;
@@ -92,6 +95,7 @@ class GenusAreaFlatpathDriver {
                     }
                     if (!(j in node.children)) {
                         let n = new DataNode();
+                        n.data = [0, 0, 0, 0];
                         n.key = j;
                         n.parent = node;
                         n.id = nextID;
@@ -103,7 +107,10 @@ class GenusAreaFlatpathDriver {
                     node = node.children[j];
                 }
             }
-            node.data[0] = nodeSize;
+            node.data[0] = totalArea;
+            node.data[1] = cellArea;
+            node.data[2] = netArea;
+            node.data[3] = cellCount;
         });
 
         reader.onClose(() => {
@@ -127,7 +134,7 @@ class GenusAreaFlatpathDriver {
                     let remainingSize = node.data[0] - size;
                     if (node.children && Object.keys(node.children).length != 0 && remainingSize > 0) {
                         let n = new DataNode();
-                        n.data[0] = remainingSize;
+                        n.data = [remainingSize, 0, 0, 0];
                         n.key = "others";
                         n.parent = node;
                         n.id = nextID;
@@ -151,8 +158,22 @@ class GenusAreaFlatpathDriver {
     }
 
     fileNodeToStr(fileNode: DataNode, rootNode: DataNode, dataIndex: number, detailed: boolean) {
-        return fileNodeToStr(fileNode, rootNode, dataIndex);
+        const rootSize = rootNode.data[0];
+        const percentage =
+            rootSize > 0 ? ((fileNode.data[dataIndex] / rootSize) * 100).toFixed(2) : "0.00";
+
+        const fmt = formatNumberCompact;
+        if (detailed) {
+            return ` [total: ${fmt(fileNode.data[0])} (${percentage}%), cell: ${fmt(fileNode.data[1])}, net: ${fmt(fileNode.data[2])}, cell-count: ${fmt(fileNode.data[3])}]`;
+        } else {
+            return ` [${fmt(fileNode.data[0])} (${percentage}%)]`;
+        }
     }
+
+    itemNames() {
+        return ["total", "cell", "net", "cell-count"];
+    }
+
 };
 
 export default GenusAreaFlatpathDriver;

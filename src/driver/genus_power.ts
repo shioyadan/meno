@@ -1,4 +1,4 @@
-import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback, fileNodeToStr } from "./driver";
+import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback, formatNumberCompact } from "./driver";
 
 class GenusPowerFlatpathDriver {
 
@@ -79,6 +79,11 @@ class GenusPowerFlatpathDriver {
             const totalVal = Number(totalStr);
             if (!Number.isFinite(totalVal)) return;
 
+            // その他
+            const internalSwitch = Number(words[4]);
+            const leak = Number(words[3]);
+            const cell = Number(words[0]);
+
             // Instance は最後のトークン想定（列幅が固定でインスタンスに空白は入らない前提）
             const instance = words[words.length - 1];
 
@@ -95,6 +100,7 @@ class GenusPowerFlatpathDriver {
                     if (!node.children) node.children = {};
                     if (!(key in node.children)) {
                         const n = new DataNode();
+                        n.data = [0, 0, 0, 0];
                         n.key = key;
                         n.parent = node;
                         n.id = nextID++;
@@ -107,7 +113,10 @@ class GenusPowerFlatpathDriver {
             }
 
             // 葉に Total を加算（同一インスタンスが複数回出た場合を考慮して加算）
-            node.data[0] = (node.data[0] || 0) + totalVal;
+            node.data[0] += totalVal;
+            node.data[1] += internalSwitch;
+            node.data[2] += leak;
+            node.data[3] += cell;
             sawData = true;
 
             // 進捗コール
@@ -138,7 +147,7 @@ class GenusPowerFlatpathDriver {
                     const remaining = orgSize - childSum;
                     if (node.children && Object.keys(node.children).length !== 0 && remaining > 0) {
                         const n = new DataNode();
-                        n.data[0] = remaining;
+                        n.data = [remaining, 0, 0, 0];
                         n.key = "others";
                         n.parent = node;
                         n.id = (nextID++);
@@ -168,7 +177,20 @@ class GenusPowerFlatpathDriver {
     }
 
     fileNodeToStr(fileNode: DataNode, rootNode: DataNode, dataIndex: number, detailed: boolean) {
-        return fileNodeToStr(fileNode, rootNode, dataIndex);
+        const rootSize = rootNode.data[0];
+        const percentage =
+            rootSize > 0 ? ((fileNode.data[0] / rootSize) * 100).toFixed(2) : "0.00";
+
+        const fmt = formatNumberCompact;
+        if (detailed) {
+            return ` [total: ${fmt(fileNode.data[0])} (${percentage}%), int-sw: ${fmt(fileNode.data[1])}, leak: ${fmt(fileNode.data[2])}, cell: ${fmt(fileNode.data[3])}]`;
+        } else {
+            return ` [${fmt(fileNode.data[0])} (${percentage}%)]`;
+        }
+    }
+
+    itemNames() {
+        return ["total", "int-sw", "leak", "cell-count"];
     }
 }
 

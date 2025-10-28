@@ -1,4 +1,4 @@
-import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback, fileNodeToStr } from "./driver";
+import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback, formatNumberCompact } from "./driver";
 
 class PrimeTimePowerDriver {
 
@@ -148,7 +148,11 @@ class PrimeTimePowerDriver {
             node.key = key;
             node.parent = parentNode;
             node.id = nextID++;
+            node.data = [0, 0, 0, 0]; // [total, int, sw, leak]
             node.data[0] = totalPower; // ノードサイズは Total Power
+            node.data[1] = intPower;
+            node.data[2] = switchPower;
+            node.data[3] = leakPower;
 
             parentNode.children[key] = node;
 
@@ -172,7 +176,7 @@ class PrimeTimePowerDriver {
                 const remaining = org - sum;
                 if (node.children && Object.keys(node.children).length !== 0 && remaining > 0) {
                     const n = new DataNode();
-                    n.data[0] = remaining;
+                    n.data = [remaining, 0, 0, 0];
                     n.key = "others";
                     n.parent = node;
                     n.id = nextID++;
@@ -194,7 +198,20 @@ class PrimeTimePowerDriver {
     }
 
     fileNodeToStr(fileNode: DataNode, rootNode: DataNode, dataIndex: number, detailed: boolean) {
-        return fileNodeToStr(fileNode, rootNode, dataIndex);
+        const rootSize = rootNode.data[0];
+        const percentage =
+            rootSize > 0 ? ((fileNode.data[0] / rootSize) * 100).toFixed(2) : "0.00";
+
+        const fmt = formatNumberCompact;
+        if (detailed) {
+            return ` [total: ${fmt(fileNode.data[0])} (${percentage}%), int: ${fmt(fileNode.data[1])}, sw: ${fmt(fileNode.data[2])}, leak: ${fmt(fileNode.data[3])}]`;
+        } else {
+            return ` [${fmt(fileNode.data[0])} (${percentage}%)]`;
+        }
+    }
+
+    itemNames() {
+        return ["total", "int", "sw", "leak"];
     }
 
 };

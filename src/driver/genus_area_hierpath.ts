@@ -1,4 +1,4 @@
-import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback, fileNodeToStr } from "./driver";
+import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback, fileNodeToStr, formatNumberCompact } from "./driver";
 
 // HierarchicalPath
 class GenusAreaHierpathDriver {
@@ -115,7 +115,10 @@ class GenusAreaHierpathDriver {
             const fullPath = curNodes.slice(0, level+1).join("/");
     
             const nodeNames = fullPath.split(/[\/]/);
-            const nodeSize = Number(words[curLineTotalAreaCol]);    // Total Area
+            const cellCount = Number(words[2]);   // Cell count
+            const cellArea = Number(words[3]);    // Cell area
+            const netArea = Number(words[4]);     // Net area
+            const totalArea = Number(words[5]);   // Macro area
                 
             // 目的となるノードを探す
             let node = tree;
@@ -130,6 +133,7 @@ class GenusAreaHierpathDriver {
                     }
                     if (!(j in node.children)) {
                         let n = new DataNode();
+                        n.data = [0, 0, 0, 0];
                         n.key = j;
                         n.parent = node;
                         n.id = nextID;
@@ -141,7 +145,10 @@ class GenusAreaHierpathDriver {
                     node = node.children[j];
                 }
             }
-            node.data[0] = nodeSize;
+            node.data[0] = totalArea;
+            node.data[1] = cellArea;
+            node.data[2] = netArea;
+            node.data[3] = cellCount;
         });
 
         reader.onClose(() => {
@@ -189,8 +196,22 @@ class GenusAreaHierpathDriver {
     }
 
     fileNodeToStr(fileNode: DataNode, rootNode: DataNode, dataIndex: number, detailed: boolean) {
-        return fileNodeToStr(fileNode, rootNode, dataIndex);
+        const rootSize = rootNode.data[0];
+        const percentage =
+            rootSize > 0 ? ((fileNode.data[dataIndex] / rootSize) * 100).toFixed(2) : "0.00";
+
+        const fmt = formatNumberCompact;
+        if (detailed) {
+            return ` [total: ${fmt(fileNode.data[0])} (${percentage}%), cell: ${fmt(fileNode.data[1])}, net: ${fmt(fileNode.data[2])}, cell-count: ${fmt(fileNode.data[3])}]`;
+        } else {
+            return ` [${fmt(fileNode.data[0])} (${percentage}%)]`;
+        }
     }
+
+    itemNames() {
+        return ["total", "cell", "net", "cell-count"];
+    }
+
 };
 
 export default GenusAreaHierpathDriver;
