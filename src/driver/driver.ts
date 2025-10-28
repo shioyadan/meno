@@ -62,13 +62,14 @@ class FileReader {
     }
 }
 
+// ルートノードのサイズを取得
+const getRootSize = (fileNode: FileNode): number => {
+    let cur = fileNode;
+    while (cur.parent && cur.parent.id !== -1) cur = cur.parent;
+    return cur.size;
+};
+
 const fileNodeToStr = (fileNode: FileNode, isSizeMode: boolean, unit: string = "") => {
-    // ルートノードを取得
-    const getRoot = (n: FileNode) => {
-        let cur = n;
-        while (cur.parent && cur.parent.id !== -1) cur = cur.parent;
-        return cur;
-    };
 
     let str = "";
     const num = fileNode.size;
@@ -82,15 +83,29 @@ const fileNodeToStr = (fileNode: FileNode, isSizeMode: boolean, unit: string = "
         str = "" + num;
     }
 
-    const root = getRoot(fileNode);
-    const rootSize = root.size;
+    const rootSize = getRootSize(fileNode);
     const percentage =
         rootSize > 0 ? ((fileNode.size / rootSize) * 100).toFixed(2) : "0.00";
 
     return ` [${str} ${unit}, ${percentage}%]`;
 }
 
+// 祖先の重複を排除して合計サイズを出す
+const calcDedupedTotalSize = (results: FileNode[] = []) => {
+    if (!results.length) return 0;
+    const idSet = new Set<number>(results.map(n => n?.id));
+    // 祖先がヒットしていない最上位ノードのみを残す
+    const topLevel = results.filter(n => {
+        let p = n?.parent;
+        while (p) {
+            if (idSet.has(p.id)) return false; // 親(祖先)がヒットしている → 除外
+            p = p.parent;
+        }
+        return true;
+    });
+    return topLevel.reduce((acc, n) => acc + (n?.size || 0), 0);
+};
 
 export { FileReader, FileNode, FinishCallback, 
-    ProgressCallback, ErrorCallback, CloseHandler, ReadLineHandler, fileNodeToStr };
+    ProgressCallback, ErrorCallback, CloseHandler, ReadLineHandler, fileNodeToStr, getRootSize, calcDedupedTotalSize };
 

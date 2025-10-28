@@ -1,10 +1,11 @@
 import React, { useRef, useEffect, useState } from "react";
 import Store, { ACTION, CHANGE } from "./store";
 import { FileNode } from "./loader";
+import { calcDedupedTotalSize } from "./driver/driver";
 
 import { fileOpen } from "browser-fs-access";
 
-import { Nav, Navbar, NavDropdown, Form, FormControl, InputGroup, Button, Dropdown } from "react-bootstrap";
+import { Nav, Navbar, NavDropdown, FormControl, InputGroup, Button } from "react-bootstrap";
 import { Modal } from "react-bootstrap";
 
 // react-icons 経由でアイコンをインポートすると，webpack でのビルド時に必要なアイコンのみがバンドルされる
@@ -250,21 +251,6 @@ const StatusBar = (props: {store: Store;}) => {
     const [searchTotalSize, setSearchTotalSize] = useState(0);
     const [rootSize, setRootSize] = useState(0);
 
-    // 重複排除して合計を出す
-    const calcDedupedTotalSize = (results: FileNode[] = []) => {
-        if (!results.length) return 0;
-        const idSet = new Set<number>(results.map(n => n?.id));
-        // 祖先がヒットしていない最上位ノードのみを残す
-        const topLevel = results.filter(n => {
-            let p = n?.parent;
-            while (p) {
-                if (idSet.has(p.id)) return false; // 親(祖先)がヒットしている → 除外
-                p = p.parent;
-            }
-            return true;
-        });
-        return topLevel.reduce((acc, n) => acc + (n?.size || 0), 0);
-    };
 
     useEffect(() => { // マウント時
         store.on(CHANGE.CANVAS_POINTER_CHANGED, () => {
