@@ -57,6 +57,7 @@ class FileInfoDriver {
             let parentID = Number(args[1]);
 
             idToNodeMap[id] = node;
+            node.id = id;
             node.key = args[2];
             node.data[2] = Number(args[3]) == 1 ? 1 : 0;    // isDirectory
             node.data[1] = Number(args[4])
