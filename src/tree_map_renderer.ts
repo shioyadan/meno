@@ -165,49 +165,62 @@ class TreeMapRenderer {
         // 子ノードに検索結果が含まれている場合もハイライト
         // 検索にヒットしたノードが描画範囲にある場合でかつ，小さすぎて描画が省略されている場合，
         // その祖先ノードもハイライトする
-        c.lineWidth = 3;
-        c.strokeStyle = "#FFA500"; // 直接一致より少しオレンジ寄り
-        {
-            // すでに描画した親ノードの重複描画を避ける
-            const painted = new Set<DataNode>();
+        const collectHighlightAreas = (areas: AreaEntry[], searchSet: Set<DataNode>): AreaEntry[] => {
 
-            // searchSet の各要素について，その祖先（親を含む）を areas の後ろから探す
-            for (let s of searchSet) {
-
-                if (!self.treeMap_.isDataNodeInView(s, virtualWidth, virtualHeight, viewPort)) {
-                    continue; // ビューポート外なら無視
-                }
-
-                // node.parent をたどって祖先集合を作る（ルート id=0 を含む）
-                const ancestorSet = new Set<DataNode>();
-                let p: DataNode|null|undefined = (s as any).parent;
-                while (p) {
-                    ancestorSet.add(p);
-                    if ((p as any).id === 0) break;
-                    p = (p as any).parent;
-                }
-                // areas を後ろから走査して最初に見つかった祖先 area にだけ描画
-                for (let i = areas.length - 1; i >= 0; i--) {
-                    const a = areas[i];
-                    if (!a.fileNode) continue;
-
-                    if (ancestorSet.has(a.fileNode)) {
-                        if (painted.has(a.fileNode)) {  // 祖先のヒット確認をやった後じゃないと同一階層の別のものが無視される
-                            break; // すでに描画済み
-                        }
-
-                        let rect = a.rect;
-                        c.strokeRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
-
-                        // 子に検索結果がいることを示すため，やや弱めのオーバーレイ
-                        c.fillStyle = "rgba(255, 165, 0, 0.20)"; // 半透明のオレンジ
-                        c.fillRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
-
-                        painted.add(a.fileNode);
-                        break; // painted を使うので，最初に描画した祖先で停止
-                    }
+            // areas の id(a.fileNode.id) -> area のマップを用意
+            const areaById = new Map<number, AreaEntry>();
+            for (const a of areas) {
+                if (a.fileNode && a.fileNode.id != -1) {
+                    areaById.set(a.fileNode.id, a);
                 }
             }
+
+            // ノード s の祖先を親方向にたどり，最初に見つかった描画対象エリアを返す
+            const getHighlightArea = (s: DataNode): AreaEntry | null => {
+                if (!self.treeMap_.isDataNodeInView(s, virtualWidth, virtualHeight, viewPort)) {
+                    return null; // ビューポート外なら無視
+                }
+                let p = s.parent;
+                while (p) {
+                    const pid = p.id;
+                    if (pid === -1) break; // ルート想定（または終端）
+                    const hitArea = areaById.get(pid);
+                    if (hitArea) return hitArea; // 最初に見つかった祖先エリア
+                    p = p.parent;
+                }
+                return null;
+            };
+
+            // ハイライト対象エリアを重複なく収集
+            // すでに描画した親ノードの重複描画を避ける
+            const painted = new Set<number>();
+            const list: AreaEntry[] = [];
+            for (let s of searchSet) {
+                const hitArea = getHighlightArea(s);
+                if (!hitArea) continue;
+
+                const pid = hitArea.fileNode?.id;
+                if (pid == null || pid === -1) continue;
+
+                if (!painted.has(pid)) {  // 祖先のヒット確認をやった後じゃないと同一階層の別のものが無視される
+                    list.push(hitArea);
+                    painted.add(pid);
+                }
+            }
+            return list;
+        };
+
+        // 収集したエリアを描画
+        c.lineWidth = 3;
+        c.strokeStyle = "#FFA500"; // 直接一致より少しオレンジ寄り
+        const highlightAreas = collectHighlightAreas(areas, searchSet);
+        for (const a of highlightAreas) {
+            const rect = a.rect;
+            c.strokeRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
+
+            // 子に検索結果がいることを示すため，やや弱めのオーバーレイ
+            c.fillStyle = "rgba(255, 165, 0, 0.20)"; // 半透明のオレンジ
+            c.fillRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
         }
 
 
