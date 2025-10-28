@@ -69,7 +69,7 @@ const getRootSize = (fileNode: FileNode): number => {
     return cur.size;
 };
 
-const fileNodeToStr = (fileNode: FileNode, isSizeMode: boolean, unit: string = "") => {
+const fileNodeToStr = (fileNode: FileNode, rootNode: FileNode, isSizeMode: boolean, unit: string = "") => {
 
     let str = "";
     const num = fileNode.size;
@@ -83,7 +83,7 @@ const fileNodeToStr = (fileNode: FileNode, isSizeMode: boolean, unit: string = "
         str = "" + num;
     }
 
-    const rootSize = getRootSize(fileNode);
+    const rootSize = rootNode.size;
     const percentage =
         rootSize > 0 ? ((fileNode.size / rootSize) * 100).toFixed(2) : "0.00";
 

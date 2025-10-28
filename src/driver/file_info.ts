@@ -113,7 +113,7 @@ class FileInfoDriver {
         reader.load();
     }
 
-    fileNodeToStr(fileNode: FileNode, isSizeMode: boolean) {
+    fileNodeToStr(fileNode: FileNode, rootNode: FileNode, isSizeMode: boolean) {
         let str = "";
         let num = isSizeMode ? fileNode.size : fileNode.fileCount;
         if (num > 1024*1024*1024) {

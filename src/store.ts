@@ -65,7 +65,7 @@ class Store {
 
 
     fileNodeToStr(fileNode: FileNode, isSizeMode: boolean) {
-        return this.loader_ ? this.loader_.fileNodeToStr(fileNode, isSizeMode) : "";
+        return this.loader_ ? this.loader_.fileNodeToStr(fileNode, this.currentRootNode ? this.currentRootNode : fileNode, isSizeMode) : "";
     }
 
     // パンくずリストのパス配列を取得

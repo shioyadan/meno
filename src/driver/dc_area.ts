@@ -130,8 +130,8 @@ class DC_AreaDriver {
         reader.load();
     }
 
-    fileNodeToStr(fileNode: FileNode, isSizeMode: boolean) {
-        return fileNodeToStr(fileNode, isSizeMode);
+    fileNodeToStr(fileNode: FileNode, rootNode: FileNode, isSizeMode: boolean) {
+        return fileNodeToStr(fileNode, rootNode, isSizeMode);
     }
 };
 

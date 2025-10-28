@@ -119,8 +119,8 @@ class VivadoAreaDriver {
         reader.load();
     }
 
-    fileNodeToStr(fileNode: FileNode, isSizeMode: boolean) {
-        return fileNodeToStr(fileNode, isSizeMode, "LUTs" );
+    fileNodeToStr(fileNode: FileNode, rootNode: FileNode, isSizeMode: boolean) {
+        return fileNodeToStr(fileNode, rootNode, isSizeMode, "LUTs" );
     }
 };
 
