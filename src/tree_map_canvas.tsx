@@ -246,6 +246,19 @@ const TreeMapCanvas = (props: {
     const handleKeydown = (e: KeyboardEvent) => {
         const canvas = canvasRef.current as HTMLCanvasElement | null;
         if (!store.tree || !canvas) return;
+        // / キーが押されたときに検索ボックスにフォーカス
+
+        // input要素やtextarea要素にフォーカスがある場合は無視
+        const activeElement = document.activeElement;
+        if (activeElement && (
+            activeElement.tagName === "INPUT" ||
+            activeElement.tagName === "TEXTAREA" ||
+            (activeElement as HTMLElement).contentEditable === "true"
+        )) {
+            return;
+        }
+
+
         let key = e.key;
         if (key === "ArrowUp") {
             if (e.ctrlKey) {
