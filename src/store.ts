@@ -1,5 +1,6 @@
 import {Loader, FileReader, DataNode} from "./loader";
 import TreeMapRenderer from "./tree_map_renderer";
+import {Settings} from "./settings";
 
 enum ACTION {
     TREE_LOAD,
@@ -57,7 +58,7 @@ class Store {
     pointedFileNode: DataNode|null = null;
 
     // UI color theme
-    uiTheme = "dark";
+    get uiTheme() { return this.settings.uiTheme; }
 
     // 表示データのインデックス
     dataIndex = 0;
@@ -66,6 +67,11 @@ class Store {
     searchQuery: string = "";
     searchResults: DataNode[] = [];
 
+    // アプリ設定
+    settings = new Settings();
+    saveSetting() {
+        this.settings.save();
+    };
 
     fileNodeToStr(fileNode: DataNode, dataIndex: number, detailed: boolean): string {
         return this.loader_ ? this.loader_.fileNodeToStr(fileNode, this.currentRootNode ? this.currentRootNode : fileNode, dataIndex, detailed) : "";
@@ -91,6 +97,7 @@ class Store {
     constructor() {
         this.treeMapRenderer = new TreeMapRenderer();
         this.loader_ = new Loader();
+        this.settings.load();
 
         this.on(ACTION.FILE_IMPORT, (inputStr: string) => {
             let fileReader = new FileReader(inputStr);
@@ -134,7 +141,8 @@ class Store {
         this.on(ACTION.DIALOG_HELP_OPEN, () => { this.trigger(CHANGE.DIALOG_HELP_OPEN); });
         this.on(ACTION.FIT_TO_CANVAS, () => {this.trigger(CHANGE.FIT_TO_CANVAS);}); 
         this.on(ACTION.CHANGE_UI_THEME, (theme: string) => {
-            this.uiTheme = theme;
+            this.settings.uiTheme = theme;
+            this.saveSetting();
             this.trigger(CHANGE.CHANGE_UI_THEME);
         });
 
