@@ -53,14 +53,6 @@ const ToolBar = (props: {store: Store;}) => {
         handleSearch(query);
     };
 
-    const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Escape') {
-            setSearchQuery("");
-            store.trigger(ACTION.CLEAR_SEARCH);
-            searchInputRef.current?.blur();
-        }
-    };
-
     const handleSearchClear = () => {
         setSearchQuery("");
         store.trigger(ACTION.CLEAR_SEARCH);
@@ -112,6 +104,11 @@ const ToolBar = (props: {store: Store;}) => {
                 event.preventDefault();
                 searchInputRef.current?.focus();
             }
+            if (event.key === 'Escape') {
+                setSearchQuery("");
+                store.trigger(ACTION.CLEAR_SEARCH);
+            }
+
         };
 
         document.addEventListener('keydown', handleKeydown);
@@ -212,7 +209,6 @@ const ToolBar = (props: {store: Store;}) => {
                         placeholder="Search nodes"
                         value={searchQuery}
                         onChange={handleSearchInputChange}
-                        onKeyDown={handleSearchKeyDown}
                     />
                     {searchQuery && (
                         <Button 
