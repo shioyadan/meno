@@ -3,3 +3,5 @@ dist
 work
 demo/*.log
 demo/*.html
+.codex
+*.zip
