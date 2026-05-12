@@ -265,6 +265,13 @@ const StatusBar = (props: {store: Store;}) => {
         store.on(CHANGE.TREE_LOADED, () => {
             setRootSize((store.currentRootNode && store.currentRootNode.data[0]) ? store.currentRootNode.data[0] : 0);
         });
+        store.on(CHANGE.TREE_RELEASED, () => {
+            setStatusBarMessage("");
+            setSearchResultsCount(0);
+            setSearchQuery("");
+            setSearchTotalSize(0);
+            setRootSize(0);
+        });
         store.on(CHANGE.SEARCH_RESULTS_CHANGED, () => {
             setSearchResultsCount(store.searchResults.length);
             setSearchQuery(store.searchQuery);
@@ -523,6 +530,7 @@ const Breadcrumb = (props: {store: Store;}) => {
         store.on(CHANGE.CHANGE_UI_THEME,    () => { setTheme(store.uiTheme); });
         store.on(CHANGE.ROOT_NODE_CHANGED,  () => { setBreadcrumbPath(store.getBreadcrumbPath()); });
         store.on(CHANGE.TREE_LOADED,        () => { setBreadcrumbPath(store.getBreadcrumbPath()); });
+        store.on(CHANGE.TREE_RELEASED,      () => { setBreadcrumbPath([]); });
         setBreadcrumbPath(store.getBreadcrumbPath());   // 初期値を設定
     }, []);
 

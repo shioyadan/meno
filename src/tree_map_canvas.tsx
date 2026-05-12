@@ -75,7 +75,11 @@ const TreeMapCanvas = (props: {
         store.on(CHANGE.TREE_LOADED, () => {
             ctx.dataIndex = store.dataIndex;
             draw();
-        });    
+        });
+        store.on(CHANGE.TREE_RELEASED, () => {
+            ctx.dataIndex = store.dataIndex;
+            draw();
+        });
         store.on(CHANGE.CHANGE_UI_THEME, draw);    
 
         store.on(CHANGE.CHANGE_DATA_INDEX, () => {

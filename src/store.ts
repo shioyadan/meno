@@ -97,6 +97,17 @@ class Store {
         return path;
     }
 
+    releaseCurrentTree_() {
+        this.tree = null;
+        this.originalTree = null;
+        this.currentRootNode = null;
+        this.pointedPath = "";
+        this.pointedFileNode = null;
+        this.searchResults = [];
+        this.treeMapRenderer.clear();
+        this.trigger(CHANGE.TREE_RELEASED);
+    }
+
     constructor() {
         this.treeMapRenderer = new TreeMapRenderer();
         this.loader_ = new Loader();
@@ -106,9 +117,8 @@ class Store {
             let fileReader = new FileReader(input);
 
             this.dataIndex = 0; // デフォルトのデータインデックスを設定
-            this.searchResults = [];
 
-            this.treeMapRenderer.clear();
+            this.releaseCurrentTree_();
             this.trigger(CHANGE.FILE_LOADING_START);
             this.loader_.load(
                 fileReader, 
