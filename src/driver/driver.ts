@@ -8,6 +8,9 @@ type CloseHandler = () => void;
 type FileReadErrorHandler = (error: unknown) => void;
 type FileReaderSource = string | File;
 
+const EMBEDDED_FILE_NAME = "embedded.log";
+const TEXT_STREAM_CHUNK_SIZE = 1024 * 1024;
+
 class DataNode {
 
     children: Record<string, DataNode>|null = {};
@@ -27,26 +30,71 @@ class DataNode {
     }
 }
 
+const isWhitespace = (char: string): boolean => /\s/.test(char);
+
+// 以前の埋め込みデータ読み込みは text.trim() してから行分割していたため、
+// stream 化しても先頭末尾の空白を落とす挙動はここで維持する。
+const getTrimBounds = (text: string): { start: number, end: number } => {
+    let start = 0;
+    let end = text.length;
+    while (start < end && isWhitespace(text[start])) start++;
+    while (end > start && isWhitespace(text[end - 1])) end--;
+    return { start, end };
+};
+
+// embed.sh が HTML に埋め込むデータは、起動時点では巨大な string として存在する。
+// その string 自体の保持は避けられないが、ここで ReadableStream に変換しておくと、
+// FileReader 側に生テキスト専用の行分割経路を持たずに済み、通常の File 入力と同じ
+// FileLineReader の backpressure/cancel/error 処理を使える。
+const createTextStream = (text: string): { stream: ReadableStream<Uint8Array>, size: number } => {
+    const { start, end } = getTrimBounds(text);
+    const encoder = new TextEncoder();
+    let offset = start;
+
+    return {
+        stream: new ReadableStream<Uint8Array>({
+            pull(controller) {
+                if (offset >= end) {
+                    controller.close();
+                    return;
+                }
+
+                let chunkEnd = Math.min(offset + TEXT_STREAM_CHUNK_SIZE, end);
+                if (chunkEnd < end) {
+                    // TextEncoder に渡すチャンク境界で surrogate pair を分断しない。
+                    // 分断すると非 ASCII 文字が置換文字に化ける可能性がある。
+                    const lastCode = text.charCodeAt(chunkEnd - 1);
+                    if (lastCode >= 0xd800 && lastCode <= 0xdbff) {
+                        chunkEnd--;
+                    }
+                }
+
+                controller.enqueue(encoder.encode(text.slice(offset, chunkEnd)));
+                offset = chunkEnd;
+            },
+            cancel() {
+                offset = end;
+            },
+        }),
+        size: end - start,
+    };
+};
+
 // 生データをファイル的に読み込むためのプロクシ
 class FileReader {
     readLineHandler_: ReadLineHandler|null = null;
     closeHandler_: CloseHandler|null = null;
     errorHandler_: FileReadErrorHandler|null = null;
-    content_: string|null = null;
-    file_: File|null = null;
+    source_: FileReaderSource;
     lineReader_: FileLineReader|null = null;
     cancel_ = false;
     
     constructor(source: FileReaderSource) {
-        if (typeof source === "string") {
-            this.content_ = source;
-        } else {
-            this.file_ = source;
-        }
+        this.source_ = source;
     }
 
     clone() {
-        return new FileReader(this.content_ ?? this.file_!);
+        return new FileReader(this.source_);
     }
 
     cancel() {
@@ -63,36 +111,24 @@ class FileReader {
     onError(errorHandler: FileReadErrorHandler) {
         this.errorHandler_ = errorHandler;
     }
-    
-    private loadFromString_() {
-        const content = (this.content_ ?? "").trim();
-        let start = 0;
-        while (!this.cancel_ && start < content.length) {
-            let end = content.indexOf("\n", start);
-            if (end === -1) {
-                end = content.length;
-            }
-            let line = content.slice(start, end);
-            if (line.endsWith("\r")) {
-                line = line.slice(0, -1);
-            }
-            if (line.length > 0 || end < content.length) {
-                this.readLineHandler_?.(line);
-            }
-            start = end + 1;
+
+    private createLineReader_(): FileLineReader {
+        if (typeof this.source_ === "string") {
+            // 埋め込み入力も擬似的なファイル stream として扱う。
+            // zstd 判定は fileName ベースなので、通常ログ名にして圧縮入力とは区別する。
+            const { stream, size } = createTextStream(this.source_);
+            return new FileLineReader({
+                stream,
+                fileName: EMBEDDED_FILE_NAME,
+                fileSize: size,
+            });
         }
-        if (!this.cancel_) {
-            this.closeHandler_?.();
-        }
+
+        return new FileLineReader({ file: this.source_ });
     }
 
-    private async loadFromFile_() {
-        if (!this.file_) {
-            this.closeHandler_?.();
-            return;
-        }
-
-        this.lineReader_ = new FileLineReader({ file: this.file_ });
+    private async loadFromSource_() {
+        this.lineReader_ = this.createLineReader_();
         await this.lineReader_.load(
             (line) => {
                 if (line.endsWith("\r")) {
@@ -118,11 +154,8 @@ class FileReader {
     }
 
     load() {
-        if (this.content_ !== null) {
-            this.loadFromString_();
-        } else {
-            void this.loadFromFile_();
-        }
+        if (this.cancel_) return;
+        void this.loadFromSource_();
     }
 }
 
