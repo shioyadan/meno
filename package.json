@@ -7,26 +7,28 @@
     "dependencies": {
         "bootstrap": "^5.3.8",
         "bootstrap-icons": "^1.13.1",
+        "browser-fs-access": "^0.38.0",
+        "fzstd": "^0.1.1",
         "react": "^19.2.0",
         "react-bootstrap": "^2.10.10",
         "react-dom": "^19.2.0",
-        "react-icons": "^5.5.0",
-        "browser-fs-access": "^0.38.0"
+        "react-icons": "^5.5.0"
     },
     "devDependencies": {
         "@types/bootstrap": "^5.2.10",
         "@types/react": "^19.2.2",
         "@types/react-bootstrap": "^1.1.0",
         "@types/react-dom": "^19.2.2",
-        "license-checker": "^25.0.1",
         "css-loader": "^7.1.2",
         "html-inline-script-webpack-plugin": "^3.2.1",
         "html-webpack-plugin": "^5.6.4",
+        "license-checker": "^25.0.1",
         "style-loader": "^4.0.0",
         "ts-loader": "^9.5.4",
         "typescript": "^5.9.3",
         "webpack": "^5.102.1",
         "webpack-cli": "^6.0.1",
-        "webpack-dev-server": "^5.2.2"
+        "webpack-dev-server": "^5.2.2",
+        "worker-loader": "^3.0.8"
     }
 }

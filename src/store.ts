@@ -99,8 +99,8 @@ class Store {
         this.loader_ = new Loader();
         this.settings.load();
 
-        this.on(ACTION.FILE_IMPORT, (inputStr: string) => {
-            let fileReader = new FileReader(inputStr);
+        this.on(ACTION.FILE_IMPORT, (input: string | File) => {
+            let fileReader = new FileReader(input);
 
             this.dataIndex = 0; // デフォルトのデータインデックスを設定
             this.searchResults = [];

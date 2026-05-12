@@ -31,7 +31,22 @@ module.exports = (env, argv) => {
                 {
                     test: /\.tsx?$/,
                     use: "ts-loader",
-                    exclude: /node_modules/,
+                    exclude: [/node_modules/, /zstd_worker\.ts$/],
+                },
+                {
+                    test: /zstd_worker\.ts$/,
+                    use: [
+                        {
+                            loader: "worker-loader",
+                            options: {
+                                inline: "no-fallback",
+                                filename: "zstd_worker.js",
+                            },
+                        },
+                        {
+                            loader: "ts-loader",
+                        },
+                    ],
                 },
                 {
                     test: /\.css$/, // CSSファイルの読み込み
@@ -69,4 +84,3 @@ module.exports = (env, argv) => {
         },
     };
 };
-

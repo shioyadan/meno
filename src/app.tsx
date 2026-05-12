@@ -58,14 +58,7 @@ const App = () => {
             return;
         }
 
-        const reader = new FileReader();
-        reader.onload = () => {
-            storeRef.current.trigger(ACTION.FILE_IMPORT, reader.result as string);   
-        };
-        reader.onerror = () => {
-            // setError("Failed to read the file");
-        };
-        reader.readAsText(file); // ファイルをテキストとして読み込み
+        storeRef.current.trigger(ACTION.FILE_IMPORT, file);
     };
 
     return (

@@ -1,8 +1,12 @@
+import { FileLineReader } from "../file_line_reader";
+
 type FinishCallback = (fileNode: DataNode|null) => void;
 type ErrorCallback = (errorMessage: string) => void;
 type ProgressCallback = (s: string) => void;
 type ReadLineHandler = (line: string) => void;
 type CloseHandler = () => void;
+type FileReadErrorHandler = (error: unknown) => void;
+type FileReaderSource = string | File;
 
 class DataNode {
 
@@ -27,19 +31,27 @@ class DataNode {
 class FileReader {
     readLineHandler_: ReadLineHandler|null = null;
     closeHandler_: CloseHandler|null = null;
-    content_ = "";
+    errorHandler_: FileReadErrorHandler|null = null;
+    content_: string|null = null;
+    file_: File|null = null;
+    lineReader_: FileLineReader|null = null;
     cancel_ = false;
     
-    constructor(content: string) {
-        this.content_ = content;
+    constructor(source: FileReaderSource) {
+        if (typeof source === "string") {
+            this.content_ = source;
+        } else {
+            this.file_ = source;
+        }
     }
 
     clone() {
-        return new FileReader(this.content_);
+        return new FileReader(this.content_ ?? this.file_!);
     }
 
     cancel() {
         this.cancel_ = true;
+        this.lineReader_?.cancel();
     }
 
     onReadLine(readLineHandler: ReadLineHandler) {
@@ -48,18 +60,69 @@ class FileReader {
     onClose(closeHandler: CloseHandler) {
         this.closeHandler_ = closeHandler;
     }
+    onError(errorHandler: FileReadErrorHandler) {
+        this.errorHandler_ = errorHandler;
+    }
     
-    load() {
-        const lines = this.content_.trim().split("\n");
-        // const lines = rawStr.trim().split("\n");
-        for (let i of lines) {
-            if (this.cancel_) {
-                break;
+    private loadFromString_() {
+        const content = (this.content_ ?? "").trim();
+        let start = 0;
+        while (!this.cancel_ && start < content.length) {
+            let end = content.indexOf("\n", start);
+            if (end === -1) {
+                end = content.length;
             }
-            this.readLineHandler_?.(i);
+            let line = content.slice(start, end);
+            if (line.endsWith("\r")) {
+                line = line.slice(0, -1);
+            }
+            if (line.length > 0 || end < content.length) {
+                this.readLineHandler_?.(line);
+            }
+            start = end + 1;
         }
-        if (!this.cancel_)
+        if (!this.cancel_) {
             this.closeHandler_?.();
+        }
+    }
+
+    private async loadFromFile_() {
+        if (!this.file_) {
+            this.closeHandler_?.();
+            return;
+        }
+
+        this.lineReader_ = new FileLineReader({ file: this.file_ });
+        await this.lineReader_.load(
+            (line) => {
+                if (line.endsWith("\r")) {
+                    line = line.slice(0, -1);
+                }
+                if (!this.cancel_) {
+                    this.readLineHandler_?.(line);
+                }
+            },
+            () => {
+                if (!this.cancel_) {
+                    this.closeHandler_?.();
+                }
+            },
+            (error) => {
+                console.error("Failed to read file:", error);
+                if (!this.cancel_) {
+                    this.cancel();
+                    this.errorHandler_?.(error);
+                }
+            }
+        );
+    }
+
+    load() {
+        if (this.content_ !== null) {
+            this.loadFromString_();
+        } else {
+            void this.loadFromFile_();
+        }
     }
 }
 
@@ -110,5 +173,4 @@ const calcDedupedTotalSize = (results: DataNode[] = [], dataIndex: number) => {
 };
 
 export { FileReader, DataNode, FinishCallback, 
-    ProgressCallback, ErrorCallback, CloseHandler, ReadLineHandler, fileNodeToStr, getRootSize, calcDedupedTotalSize, formatNumberCompact };
-
+    ProgressCallback, ErrorCallback, CloseHandler, ReadLineHandler, FileReadErrorHandler, fileNodeToStr, getRootSize, calcDedupedTotalSize, formatNumberCompact };

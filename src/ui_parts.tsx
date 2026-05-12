@@ -30,8 +30,7 @@ const ToolBar = (props: {store: Store;}) => {
     const openFile = async () => {
         try {
             const file = await fileOpen();
-            const contents = await file.text();
-            store.trigger(ACTION.FILE_IMPORT, contents);
+            store.trigger(ACTION.FILE_IMPORT, file);
         } catch (error) {
             console.error("Error opening file:", error);
         }

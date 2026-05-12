@@ -16,10 +16,10 @@ class Loader {
     constructor() {
         this.driver_ = null;
     }
-    load(reader: FileReader, finishCallback: FinishCallback, 
+    load(reader: FileReader, finishCallback: FinishCallback,
         progressCallback: ProgressCallback, errorCallback: ErrorCallback
     ) {
-        
+
         let drivers = driverList.map((d) => new d());
 
         let loadLocal = (drivers: any) =>{
@@ -27,13 +27,22 @@ class Loader {
             this.driver_ = drivers.shift();
             if (this.driver_) {
                 let newReader = reader.clone();
+                newReader.onError((error) => {
+                    console.log(`${this.driver_?.constructor.name} failed while reading the input. ${error}`);
+                    if(drivers.length > 0){
+                        loadLocal(drivers);
+                    }
+                    else {
+                        errorCallback("Failed to read input");
+                    }
+                });
                 this.driver_.load(
-                    newReader, 
+                    newReader,
                     (fileNode: DataNode|null) => {
                         console.log(`${this.driver_?.constructor.name} successfully loaded the input.`);
                         finishCallback(fileNode);
-                    }, 
-                    progressCallback, 
+                    },
+                    progressCallback,
                     (errorMessage: string) => {
                         newReader.cancel();
                         console.log(`${this.driver_?.constructor.name} failed and try a next driver. ${errorMessage}`);
@@ -53,7 +62,7 @@ class Loader {
     fileNodeToStr(fileNode: DataNode, rootNode: DataNode, dataIndex: number, detailed: boolean) {
         return this.driver_ ? this.driver_.fileNodeToStr(fileNode, rootNode, dataIndex, detailed) : "";
     }
-  
+
     itemNames() {
         return this.driver_ ? this.driver_.itemNames() : [];
     }
