@@ -125,10 +125,15 @@ export class FileLineReader {
         }
     }
 
-    cancel() {
+    cancel(onCanceled?: () => void) {
         this.canceled_ = true;
         if (this.reader_) {
-            this.reader_.cancel();
+            this.reader_
+                .cancel()
+                .catch(() => {})
+                .then(() => { onCanceled?.(); });
+        } else {
+            onCanceled?.();
         }
     }
 }

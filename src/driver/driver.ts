@@ -97,13 +97,21 @@ class FileReader {
         return new FileReader(this.source_);
     }
 
-    cancel() {
+    cancel(onCanceled?: () => void) {
         this.cancel_ = true;
-        this.lineReader_?.cancel();
+        if (this.lineReader_) {
+            this.lineReader_.cancel(onCanceled);
+        } else {
+            onCanceled?.();
+        }
     }
 
     getProgress(): number {
         return this.lineReader_?.getProgress() ?? 0;
+    }
+
+    isCanceled(): boolean {
+        return this.cancel_;
     }
 
     onReadLine(readLineHandler: ReadLineHandler) {
@@ -150,8 +158,8 @@ class FileReader {
             (error) => {
                 console.error("Failed to read file:", error);
                 if (!this.cancel_) {
-                    this.cancel();
                     this.errorHandler_?.(error);
+                    this.cancel();
                 }
             }
         );
@@ -159,7 +167,13 @@ class FileReader {
 
     load() {
         if (this.cancel_) return;
-        void this.loadFromSource_();
+        this.loadFromSource_().catch((error) => {
+            console.error("Failed to read file:", error);
+            if (!this.cancel_) {
+                this.errorHandler_?.(error);
+                this.cancel();
+            }
+        });
     }
 }
 

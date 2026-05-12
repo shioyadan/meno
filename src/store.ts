@@ -49,6 +49,7 @@ enum CHANGE {
 class Store {
     loader_: Loader;
     handlers_: { [key: number]: Array<(...args: any[]) => void> } = {};
+    fileLoadId_ = 0;
 
     // レンダラ
     treeMapRenderer: TreeMapRenderer;
@@ -108,42 +109,58 @@ class Store {
         this.trigger(CHANGE.TREE_RELEASED);
     }
 
+    importFile_(input: string | File) {
+        const fileLoadId = ++this.fileLoadId_;
+        this.dataIndex = 0; // デフォルトのデータインデックスを設定
+        this.releaseCurrentTree_();
+        this.trigger(CHANGE.FILE_LOADING_START);
+
+        this.loader_.cancel(() => {
+            if (fileLoadId !== this.fileLoadId_) return;
+            this.startFileImport_(input, fileLoadId);
+        });
+    }
+
+    startFileImport_(input: string | File, fileLoadId: number) {
+        let fileReader = new FileReader(input);
+        const isActiveLoad = () => this.fileLoadId_ === fileLoadId && !fileReader.isCanceled();
+
+        this.loader_.load(
+            fileReader,
+            (tree) => { // finish handler
+                if (!isActiveLoad()) return;
+                this.trigger(CHANGE.FILE_LOADING_END);
+                this.tree = tree;
+                this.originalTree = tree; // 元のツリーを保存
+                this.currentRootNode = tree; // 初期状態では元のツリーがルート
+                this.trigger(ACTION.SEARCH_NODES, this.searchQuery); // 検索結果を更新
+                this.trigger(CHANGE.TREE_LOADED);
+            },
+            (_filePath, progress)  => { // 読み込み状態の更新
+                if (!isActiveLoad()) return;
+                this.trigger(CHANGE.FILE_LOAD_PROGRESS, progress ?? 0);
+                // this.trigger(CHANGE.TREE_LOADING, this, context, filePath);
+            },
+            (errorMessage) => { // error handler
+                if (!isActiveLoad()) return;
+                this.trigger(CHANGE.FILE_LOADING_END);
+                fileReader.cancel();
+                this.tree = null;
+                this.originalTree = null;
+                this.currentRootNode = null;
+                console.log(`error: ${errorMessage}`);
+                this.trigger(CHANGE.TREE_LOADED);
+            }
+        );
+    }
+
     constructor() {
         this.treeMapRenderer = new TreeMapRenderer();
         this.loader_ = new Loader();
         this.settings.load();
 
         this.on(ACTION.FILE_IMPORT, (input: string | File) => {
-            let fileReader = new FileReader(input);
-
-            this.dataIndex = 0; // デフォルトのデータインデックスを設定
-
-            this.releaseCurrentTree_();
-            this.trigger(CHANGE.FILE_LOADING_START);
-            this.loader_.load(
-                fileReader, 
-                (tree) => { // finish handler
-                    this.trigger(CHANGE.FILE_LOADING_END);
-                    this.tree = tree;
-                    this.originalTree = tree; // 元のツリーを保存
-                    this.currentRootNode = tree; // 初期状態では元のツリーがルート
-                    this.trigger(ACTION.SEARCH_NODES, this.searchQuery); // 検索結果を更新
-                    this.trigger(CHANGE.TREE_LOADED);
-                },
-                (_filePath, progress)  => { // 読み込み状態の更新
-                    this.trigger(CHANGE.FILE_LOAD_PROGRESS, progress ?? 0);
-                    // this.trigger(CHANGE.TREE_LOADING, this, context, filePath);
-                },
-                (errorMessage) => { // error handler
-                    this.trigger(CHANGE.FILE_LOADING_END);
-                    fileReader.cancel();
-                    this.tree = null;
-                    this.originalTree = null;
-                    this.currentRootNode = null;
-                    console.log(`error: ${errorMessage}`);
-                    this.trigger(CHANGE.TREE_LOADED);
-                }
-            );
+            this.importFile_(input);
         });
 
         this.on(ACTION.CANVAS_POINTER_CHANGE, (path, fileNode) => {

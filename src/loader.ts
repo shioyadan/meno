@@ -13,47 +13,72 @@ import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback} 
 
 class Loader {
     driver_: FileInfoDriver | DC_AreaDriver | null;
+    loadId_ = 0;
+    activeReader_: FileReader | null = null;
     constructor() {
         this.driver_ = null;
     }
+
+    cancel(onCanceled?: () => void) {
+        this.loadId_++;
+        const activeReader = this.activeReader_;
+        this.activeReader_ = null;
+        if (activeReader) {
+            activeReader.cancel(onCanceled);
+        } else {
+            onCanceled?.();
+        }
+    }
+
     load(reader: FileReader, finishCallback: FinishCallback,
         progressCallback: ProgressCallback, errorCallback: ErrorCallback
     ) {
 
+        const loadId = ++this.loadId_;
+        const isCurrentLoad = () => loadId === this.loadId_;
+        const isActive = () => isCurrentLoad() && !reader.isCanceled();
         let drivers = driverList.map((d) => new d());
 
         let loadLocal = (drivers: any) =>{
+            if (!isActive()) return;
             // this.driver_ = new FileInfoDriver();
             this.driver_ = drivers.shift();
             if (this.driver_) {
                 let newReader = reader.clone();
+                this.activeReader_ = newReader;
                 newReader.onError((error) => {
+                    if (!isCurrentLoad()) return;
+                    this.activeReader_ = null;
                     console.log(`${this.driver_?.constructor.name} failed while reading the input. ${error}`);
-                    if(drivers.length > 0){
-                        loadLocal(drivers);
-                    }
-                    else {
-                        errorCallback("Failed to read input");
-                    }
+                    errorCallback("Failed to read input");
                 });
                 this.driver_.load(
                     newReader,
                     (fileNode: DataNode|null) => {
+                        if (!isActive()) return;
+                        this.activeReader_ = null;
                         console.log(`${this.driver_?.constructor.name} successfully loaded the input.`);
                         finishCallback(fileNode);
                     },
                     (message: string) => {
+                        if (!isActive()) return;
                         progressCallback(message, newReader.getProgress());
                     },
                     (errorMessage: string) => {
-                        newReader.cancel();
-                        console.log(`${this.driver_?.constructor.name} failed and try a next driver. ${errorMessage}`);
-                        if(drivers.length > 0){
-                            loadLocal(drivers);
-                        }
-                        else {
-                            errorCallback("All drivers failed");
-                        }
+                        newReader.cancel(() => {
+                            if (!isActive()) return;
+                            if (this.activeReader_ === newReader) {
+                                this.activeReader_ = null;
+                            }
+                            console.log(`${this.driver_?.constructor.name} failed and try a next driver. ${errorMessage}`);
+                            if(drivers.length > 0){
+                                loadLocal(drivers);
+                            }
+                            else {
+                                this.activeReader_ = null;
+                                errorCallback("All drivers failed");
+                            }
+                        });
                     });
             }
         };
