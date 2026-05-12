@@ -306,6 +306,65 @@ const StatusBar = (props: {store: Store;}) => {
     );
 };
 
+const LoadingBar = (props: {store: Store;}) => {
+    const { store } = props;
+    const [visible, setVisible] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [theme, setTheme] = useState(store.uiTheme);
+
+    useEffect(() => {
+        const onStart = () => {
+            setVisible(true);
+            setProgress(0);
+        };
+        const onProgress = (value: number) => {
+            setProgress(Math.max(0, Math.min(100, value * 100)));
+        };
+        const onEnd = () => {
+            setVisible(false);
+            setProgress(0);
+        };
+        const onThemeChange = () => {
+            setTheme(store.uiTheme);
+        };
+
+        store.on(CHANGE.FILE_LOADING_START, onStart);
+        store.on(CHANGE.FILE_LOAD_PROGRESS, onProgress);
+        store.on(CHANGE.FILE_LOADING_END, onEnd);
+        store.on(CHANGE.CHANGE_UI_THEME, onThemeChange);
+
+        return () => {
+            store.off(CHANGE.FILE_LOADING_START, onStart);
+            store.off(CHANGE.FILE_LOAD_PROGRESS, onProgress);
+            store.off(CHANGE.FILE_LOADING_END, onEnd);
+            store.off(CHANGE.CHANGE_UI_THEME, onThemeChange);
+        };
+    }, [store]);
+
+    if (!visible) {
+        return null;
+    }
+
+    return (
+        <div
+            style={{
+                height: "2px",
+                width: "100%",
+                backgroundColor: theme == "dark" ? "#383B41" : "#D7DAE2",
+            }}
+        >
+            <div
+                style={{
+                    height: "100%",
+                    width: `${progress}%`,
+                    backgroundColor: theme == "dark" ? "#6AA9FF" : "#1F6FEB",
+                    transition: "width 120ms linear",
+                }}
+            />
+        </div>
+    );
+};
+
 const VersionDialog = (props: {store: Store;}) => {
     const [show, setShow] = useState(false);
     const handleClose = () => {setShow(false)};
@@ -518,4 +577,4 @@ const Breadcrumb = (props: {store: Store;}) => {
     );
 };
 
-export {ToolBar, StatusBar, VersionDialog, ContextMenu, Breadcrumb, HelpDialog};
+export {ToolBar, StatusBar, LoadingBar, VersionDialog, ContextMenu, Breadcrumb, HelpDialog};

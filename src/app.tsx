@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import Store, { ACTION, CHANGE } from "./store";
 
-import {StatusBar, ToolBar, VersionDialog, ContextMenu, Breadcrumb, HelpDialog} from "./ui_parts";
+import {StatusBar, ToolBar, LoadingBar, VersionDialog, ContextMenu, Breadcrumb, HelpDialog} from "./ui_parts";
 import TreeMapCanvas from "./tree_map_canvas";
 
 import { Modal } from "react-bootstrap";
@@ -70,6 +70,7 @@ const App = () => {
             {/* // flexDirection: "column" と flexGrow: 1 を使うことで，Canvas が画面いっぱいに広がるようにしている */}
             <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
                 <ToolBar store={storeRef.current}/>
+                <LoadingBar store={storeRef.current}/>
                 <div style={{ flexGrow: 1, minHeight: 0, position: "relative" }}>
                     <TreeMapCanvas store={storeRef.current} onContextMenu={showContextMenu} />
                     <Breadcrumb store={storeRef.current} />

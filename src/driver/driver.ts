@@ -2,7 +2,7 @@ import { FileLineReader } from "../file_line_reader";
 
 type FinishCallback = (fileNode: DataNode|null) => void;
 type ErrorCallback = (errorMessage: string) => void;
-type ProgressCallback = (s: string) => void;
+type ProgressCallback = (s: string, progress?: number) => void;
 type ReadLineHandler = (line: string) => void;
 type CloseHandler = () => void;
 type FileReadErrorHandler = (error: unknown) => void;
@@ -100,6 +100,10 @@ class FileReader {
     cancel() {
         this.cancel_ = true;
         this.lineReader_?.cancel();
+    }
+
+    getProgress(): number {
+        return this.lineReader_?.getProgress() ?? 0;
     }
 
     onReadLine(readLineHandler: ReadLineHandler) {

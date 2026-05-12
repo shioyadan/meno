@@ -31,6 +31,9 @@ enum CHANGE {
     TREE_MODE_CHANGED,
     FOLDER_OPEN,
     FILE_IMPORT,
+    FILE_LOADING_START,
+    FILE_LOAD_PROGRESS,
+    FILE_LOADING_END,
     CANVAS_ZOOM_IN,
     CANVAS_ZOOM_OUT,
     CANVAS_POINTER_CHANGED,
@@ -106,19 +109,23 @@ class Store {
             this.searchResults = [];
 
             this.treeMapRenderer.clear();
+            this.trigger(CHANGE.FILE_LOADING_START);
             this.loader_.load(
                 fileReader, 
                 (tree) => { // finish handler
+                    this.trigger(CHANGE.FILE_LOADING_END);
                     this.tree = tree;
                     this.originalTree = tree; // 元のツリーを保存
                     this.currentRootNode = tree; // 初期状態では元のツリーがルート
                     this.trigger(ACTION.SEARCH_NODES, this.searchQuery); // 検索結果を更新
                     this.trigger(CHANGE.TREE_LOADED);
                 },
-                (filePath)  => { // 読み込み状態の更新
-                    // this.trigger(CHANGE.TREE_LOADING, this, context, filePath);       
+                (_filePath, progress)  => { // 読み込み状態の更新
+                    this.trigger(CHANGE.FILE_LOAD_PROGRESS, progress ?? 0);
+                    // this.trigger(CHANGE.TREE_LOADING, this, context, filePath);
                 },
                 (errorMessage) => { // error handler
+                    this.trigger(CHANGE.FILE_LOADING_END);
                     fileReader.cancel();
                     this.tree = null;
                     this.originalTree = null;

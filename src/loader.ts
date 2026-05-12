@@ -42,7 +42,9 @@ class Loader {
                         console.log(`${this.driver_?.constructor.name} successfully loaded the input.`);
                         finishCallback(fileNode);
                     },
-                    progressCallback,
+                    (message: string) => {
+                        progressCallback(message, newReader.getProgress());
+                    },
                     (errorMessage: string) => {
                         newReader.cancel();
                         console.log(`${this.driver_?.constructor.name} failed and try a next driver. ${errorMessage}`);
