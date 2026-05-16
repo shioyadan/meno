@@ -2,9 +2,12 @@ import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback, 
 
 const NO_ID = -1;
 const INITIAL_CAPACITY = 1024;
+const KEY_PAGE_BITS = 20;
+const KEY_PAGE_SIZE = 1 << KEY_PAGE_BITS;
 const DATA_SIZE = 0;
 const DATA_COUNT = 1;
 const DATA_IS_DIRECTORY = 2;
+const MAX_KEY_POOL_OFFSET = 0x7fffffff;
 
 type ChildrenMeta = {
     proxy: Record<string, DataNode>;
@@ -90,7 +93,12 @@ class CompactFileInfoStore {
     private size_: Float64Array<ArrayBufferLike> = new Float64Array(this.capacity_);
     private count_: Float64Array<ArrayBufferLike> = new Float64Array(this.capacity_);
     private directory_: Uint8Array<ArrayBufferLike> = new Uint8Array(this.capacity_);
-    private keys_: string[] = new Array(this.capacity_);
+    private keyOffset_: Int32Array<ArrayBufferLike> = new Int32Array(this.capacity_);
+    private keyLength_: Uint32Array<ArrayBufferLike> = new Uint32Array(this.capacity_);
+    private keyPages_: Uint8Array<ArrayBufferLike>[] = [];
+    private keyBytesSize_ = 0;
+    private textEncoder_ = new TextEncoder();
+    private textDecoder_ = new TextDecoder("utf-8");
 
     private nodeCache_ = new Map<number, DataNode>();
     private dataCache_ = new Map<number, number[]>();
@@ -101,7 +109,8 @@ class CompactFileInfoStore {
         this.firstChild_.fill(NO_ID);
         this.lastChild_.fill(NO_ID);
         this.nextSibling_.fill(NO_ID);
-        this.keys_[0] = "";
+        this.keyOffset_.fill(NO_ID);
+        this.setKeyBytes_(0, "");
     }
 
     addNode(id: number, parentId: number, key: string, isDirectory: boolean, fileCount: number, size: number) {
@@ -115,7 +124,7 @@ class CompactFileInfoStore {
         this.size_[id] = size;
         this.count_[id] = fileCount;
         this.directory_[id] = isDirectory ? 1 : 0;
-        this.keys_[id] = key;
+        this.setKeyBytes_(id, key);
 
         if (parentId === 0 && this.rootId_ === NO_ID) {
             this.rootId_ = id;
@@ -221,11 +230,34 @@ class CompactFileInfoStore {
     }
 
     getKey(id: number): string {
-        return this.keys_[id] ?? "";
+        const offset = this.keyOffset_[id];
+        if (offset === NO_ID) {
+            return "";
+        }
+
+        const length = this.keyLength_[id];
+        if (length === 0) {
+            return "";
+        }
+
+        const pageIndex = Math.floor(offset / KEY_PAGE_SIZE);
+        const pageOffset = offset % KEY_PAGE_SIZE;
+        const page = this.keyPages_[pageIndex];
+        if (page && pageOffset + length <= KEY_PAGE_SIZE) {
+            return this.textDecoder_.decode(page.subarray(pageOffset, pageOffset + length));
+        }
+
+        const bytes = new Uint8Array(length);
+        this.copyKeyBytes_(offset, bytes);
+        return this.textDecoder_.decode(bytes);
     }
 
     setKey(id: number, value: string) {
-        this.keys_[id] = value;
+        this.setKeyBytes_(id, value);
+        const parentId = this.parent_[id];
+        if (parentId >= 0) {
+            this.childrenCache_.delete(parentId);
+        }
     }
 
     getCount(id: number): number {
@@ -286,7 +318,7 @@ class CompactFileInfoStore {
     }
 
     private exists_(id: number): boolean {
-        return id > 0 && id <= this.maxId_ && this.keys_[id] !== undefined;
+        return id > 0 && id <= this.maxId_ && this.keyOffset_[id] !== NO_ID;
     }
 
     private ensureCapacity_(id: number) {
@@ -307,7 +339,8 @@ class CompactFileInfoStore {
         this.size_ = this.growFloat64_(this.size_, nextCapacity);
         this.count_ = this.growFloat64_(this.count_, nextCapacity);
         this.directory_ = this.growUint8_(this.directory_, nextCapacity);
-        this.keys_.length = nextCapacity;
+        this.keyOffset_ = this.growInt32_(this.keyOffset_, nextCapacity, oldCapacity);
+        this.keyLength_ = this.growUint32_(this.keyLength_, nextCapacity);
         this.capacity_ = nextCapacity;
     }
 
@@ -328,6 +361,69 @@ class CompactFileInfoStore {
         const next = new Uint8Array(nextCapacity);
         next.set(source);
         return next;
+    }
+
+    private growUint32_(source: Uint32Array, nextCapacity: number): Uint32Array {
+        const next = new Uint32Array(nextCapacity);
+        next.set(source);
+        return next;
+    }
+
+    private setKeyBytes_(id: number, value: string) {
+        const bytes = this.textEncoder_.encode(value);
+        if (this.keyBytesSize_ + bytes.length > MAX_KEY_POOL_OFFSET) {
+            throw new Error("file_info key byte pool is too large.");
+        }
+
+        const offset = this.keyBytesSize_;
+        this.writeKeyBytes_(offset, bytes);
+        this.keyOffset_[id] = offset;
+        this.keyLength_[id] = bytes.length;
+        this.keyBytesSize_ += bytes.length;
+    }
+
+    private writeKeyBytes_(offset: number, bytes: Uint8Array) {
+        let srcOffset = 0;
+        let dstOffset = offset;
+
+        // Keys are stored in fixed-size byte pages so the pool can grow without
+        // copying hundreds of MB when loading very large file_info dumps.
+        while (srcOffset < bytes.length) {
+            const pageIndex = Math.floor(dstOffset / KEY_PAGE_SIZE);
+            const pageOffset = dstOffset % KEY_PAGE_SIZE;
+            this.ensureKeyPage_(pageIndex);
+
+            const page = this.keyPages_[pageIndex];
+            const length = Math.min(bytes.length - srcOffset, KEY_PAGE_SIZE - pageOffset);
+            page.set(bytes.subarray(srcOffset, srcOffset + length), pageOffset);
+            srcOffset += length;
+            dstOffset += length;
+        }
+    }
+
+    private copyKeyBytes_(offset: number, dest: Uint8Array) {
+        let destOffset = 0;
+        let srcOffset = offset;
+
+        while (destOffset < dest.length) {
+            const pageIndex = Math.floor(srcOffset / KEY_PAGE_SIZE);
+            const pageOffset = srcOffset % KEY_PAGE_SIZE;
+            const page = this.keyPages_[pageIndex];
+            if (!page) {
+                break;
+            }
+
+            const length = Math.min(dest.length - destOffset, KEY_PAGE_SIZE - pageOffset);
+            dest.set(page.subarray(pageOffset, pageOffset + length), destOffset);
+            destOffset += length;
+            srcOffset += length;
+        }
+    }
+
+    private ensureKeyPage_(pageIndex: number) {
+        while (pageIndex >= this.keyPages_.length) {
+            this.keyPages_.push(new Uint8Array(KEY_PAGE_SIZE));
+        }
     }
 }
 
