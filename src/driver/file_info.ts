@@ -1,13 +1,27 @@
 import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback, formatNumberCompact} from "./driver";
 
 const NO_ID = -1;
-const INITIAL_CAPACITY = 1024;
+const NODE_PAGE_BITS = 18;
+const NODE_PAGE_SIZE = 1 << NODE_PAGE_BITS;
 const KEY_PAGE_BITS = 20;
 const KEY_PAGE_SIZE = 1 << KEY_PAGE_BITS;
 const DATA_SIZE = 0;
 const DATA_COUNT = 1;
 const DATA_IS_DIRECTORY = 2;
 const MAX_KEY_POOL_OFFSET = 0x7fffffff;
+const MAX_KEY_LENGTH = 0xffff;
+
+type FileInfoPage = {
+    parent: Int32Array<ArrayBufferLike>;
+    firstChild: Int32Array<ArrayBufferLike>;
+    lastChild: Int32Array<ArrayBufferLike>|null;
+    nextSibling: Int32Array<ArrayBufferLike>;
+    size: Float64Array<ArrayBufferLike>;
+    count: Uint32Array<ArrayBufferLike>;
+    directory: Uint8Array<ArrayBufferLike>;
+    keyOffset: Int32Array<ArrayBufferLike>;
+    keyLength: Uint16Array<ArrayBufferLike>;
+};
 
 type ChildrenMeta = {
     proxy: Record<string, DataNode>;
@@ -82,19 +96,10 @@ class CompactFileInfoNode {
 // this store keeps the tree in ArrayBuffer-backed typed arrays and exposes
 // DataNode-compatible wrappers only when the UI actually touches a node.
 class CompactFileInfoStore {
-    private capacity_ = INITIAL_CAPACITY;
     private maxId_ = 0;
     private rootId_ = NO_ID;
 
-    private parent_: Int32Array<ArrayBufferLike> = new Int32Array(this.capacity_);
-    private firstChild_: Int32Array<ArrayBufferLike> = new Int32Array(this.capacity_);
-    private lastChild_: Int32Array<ArrayBufferLike> = new Int32Array(this.capacity_);
-    private nextSibling_: Int32Array<ArrayBufferLike> = new Int32Array(this.capacity_);
-    private size_: Float64Array<ArrayBufferLike> = new Float64Array(this.capacity_);
-    private count_: Float64Array<ArrayBufferLike> = new Float64Array(this.capacity_);
-    private directory_: Uint8Array<ArrayBufferLike> = new Uint8Array(this.capacity_);
-    private keyOffset_: Int32Array<ArrayBufferLike> = new Int32Array(this.capacity_);
-    private keyLength_: Uint32Array<ArrayBufferLike> = new Uint32Array(this.capacity_);
+    private pages_: FileInfoPage[] = [];
     private keyPages_: Uint8Array<ArrayBufferLike>[] = [];
     private keyBytesSize_ = 0;
     private textEncoder_ = new TextEncoder();
@@ -105,25 +110,25 @@ class CompactFileInfoStore {
     private childrenCache_ = new Map<number, ChildrenMeta>();
 
     constructor() {
-        this.parent_.fill(NO_ID);
-        this.firstChild_.fill(NO_ID);
-        this.lastChild_.fill(NO_ID);
-        this.nextSibling_.fill(NO_ID);
-        this.keyOffset_.fill(NO_ID);
+        this.ensurePage_(0);
         this.setKeyBytes_(0, "");
     }
 
     addNode(id: number, parentId: number, key: string, isDirectory: boolean, fileCount: number, size: number) {
-        this.ensureCapacity_(Math.max(id, parentId));
+        this.ensurePage_(Math.max(id, parentId));
 
         this.maxId_ = Math.max(this.maxId_, id);
-        this.parent_[id] = parentId;
-        this.firstChild_[id] = NO_ID;
-        this.lastChild_[id] = NO_ID;
-        this.nextSibling_[id] = NO_ID;
-        this.size_[id] = size;
-        this.count_[id] = fileCount;
-        this.directory_[id] = isDirectory ? 1 : 0;
+        const page = this.getPage_(id);
+        const index = this.nodeIndex_(id);
+        page.parent[index] = parentId;
+        page.firstChild[index] = NO_ID;
+        if (page.lastChild) {
+            page.lastChild[index] = NO_ID;
+        }
+        page.nextSibling[index] = NO_ID;
+        page.size[index] = size;
+        page.count[index] = fileCount;
+        page.directory[index] = isDirectory ? 1 : 0;
         this.setKeyBytes_(id, key);
 
         if (parentId === 0 && this.rootId_ === NO_ID) {
@@ -135,19 +140,25 @@ class CompactFileInfoStore {
     finalize(progressCallback: ProgressCallback) {
         let count = 0;
         for (let id = this.maxId_; id >= 1; id--) {
-            if (!this.exists_(id)) {
+            const page = this.getPage_(id);
+            const index = this.nodeIndex_(id);
+            if (!this.existsInPage_(id, page, index)) {
                 continue;
             }
 
-            if (this.directory_[id] !== 0 && this.firstChild_[id] !== NO_ID) {
+            const firstChild = page.firstChild[index];
+            if (page.directory[index] !== 0 && firstChild !== NO_ID) {
                 let size = 0;
                 let fileCount = 0;
-                for (let childId = this.firstChild_[id]; childId !== NO_ID; childId = this.nextSibling_[childId]) {
-                    size += this.size_[childId];
-                    fileCount += this.count_[childId];
+                for (let childId = firstChild; childId !== NO_ID;) {
+                    const childPage = this.getPage_(childId);
+                    const childIndex = this.nodeIndex_(childId);
+                    size += childPage.size[childIndex];
+                    fileCount += childPage.count[childIndex];
+                    childId = childPage.nextSibling[childIndex];
                 }
-                this.size_[id] = size;
-                this.count_[id] = fileCount;
+                page.size[index] = size;
+                page.count[index] = fileCount;
             }
 
             if (count % (1024 * 4) === 0) {
@@ -156,10 +167,15 @@ class CompactFileInfoStore {
             count++;
         }
 
-        if (this.rootId_ !== NO_ID && this.directory_[this.rootId_] !== 0 && this.firstChild_[this.rootId_] === NO_ID) {
-            this.size_[this.rootId_] = 0;
-            this.count_[this.rootId_] = 0;
+        if (this.rootId_ !== NO_ID) {
+            const rootPage = this.getPage_(this.rootId_);
+            const rootIndex = this.nodeIndex_(this.rootId_);
+            if (rootPage.directory[rootIndex] !== 0 && rootPage.firstChild[rootIndex] === NO_ID) {
+                rootPage.size[rootIndex] = 0;
+                rootPage.count[rootIndex] = 0;
+            }
         }
+        this.releaseLastChild_();
         this.dataCache_.clear();
     }
 
@@ -171,7 +187,8 @@ class CompactFileInfoStore {
     }
 
     getChildren(id: number): Record<string, DataNode>|null {
-        if (this.firstChild_[id] === NO_ID) {
+        const firstChild = this.getFirstChildId_(id);
+        if (firstChild === NO_ID) {
             return null;
         }
 
@@ -182,7 +199,7 @@ class CompactFileInfoStore {
 
         const keys: string[] = [];
         const idByKey: Record<string, number> = Object.create(null);
-        for (let childId = this.firstChild_[id]; childId !== NO_ID; childId = this.nextSibling_[childId]) {
+        for (let childId = firstChild; childId !== NO_ID; childId = this.getNextSiblingId_(childId)) {
             const key = this.getKey(childId);
             keys.push(key);
             idByKey[key] = childId;
@@ -222,7 +239,7 @@ class CompactFileInfoStore {
     }
 
     getParent(id: number): DataNode|null {
-        const parentId = this.parent_[id];
+        const parentId = this.getParentId_(id);
         if (parentId <= 0 || !this.exists_(parentId)) {
             return null;
         }
@@ -230,21 +247,23 @@ class CompactFileInfoStore {
     }
 
     getKey(id: number): string {
-        const offset = this.keyOffset_[id];
+        const page = this.getPage_(id);
+        const index = this.nodeIndex_(id);
+        const offset = page.keyOffset[index];
         if (offset === NO_ID) {
             return "";
         }
 
-        const length = this.keyLength_[id];
+        const length = page.keyLength[index];
         if (length === 0) {
             return "";
         }
 
         const pageIndex = Math.floor(offset / KEY_PAGE_SIZE);
         const pageOffset = offset % KEY_PAGE_SIZE;
-        const page = this.keyPages_[pageIndex];
-        if (page && pageOffset + length <= KEY_PAGE_SIZE) {
-            return this.textDecoder_.decode(page.subarray(pageOffset, pageOffset + length));
+        const keyPage = this.keyPages_[pageIndex];
+        if (keyPage && pageOffset + length <= KEY_PAGE_SIZE) {
+            return this.textDecoder_.decode(keyPage.subarray(pageOffset, pageOffset + length));
         }
 
         const bytes = new Uint8Array(length);
@@ -254,48 +273,56 @@ class CompactFileInfoStore {
 
     setKey(id: number, value: string) {
         this.setKeyBytes_(id, value);
-        const parentId = this.parent_[id];
+        const parentId = this.getParentId_(id);
         if (parentId >= 0) {
             this.childrenCache_.delete(parentId);
         }
     }
 
     getCount(id: number): number {
-        return this.count_[id];
+        const page = this.getPage_(id);
+        return page.count[this.nodeIndex_(id)];
     }
 
     setCount(id: number, value: number) {
-        this.count_[id] = value;
+        const page = this.getPage_(id);
+        page.count[this.nodeIndex_(id)] = value;
         this.dataCache_.delete(id);
     }
 
     isDirectory(id: number): boolean {
-        return this.directory_[id] !== 0;
+        const page = this.getPage_(id);
+        return page.directory[this.nodeIndex_(id)] !== 0;
     }
 
     setDirectory(id: number, value: boolean) {
-        this.directory_[id] = value ? 1 : 0;
+        const page = this.getPage_(id);
+        page.directory[this.nodeIndex_(id)] = value ? 1 : 0;
         this.dataCache_.delete(id);
     }
 
     getData(id: number): number[] {
         let data = this.dataCache_.get(id);
         if (!data) {
-            data = [this.size_[id], this.count_[id], this.directory_[id]];
+            const page = this.getPage_(id);
+            const index = this.nodeIndex_(id);
+            data = [page.size[index], page.count[index], page.directory[index]];
             this.dataCache_.set(id, data);
         }
         return data;
     }
 
     setData(id: number, value: number[]) {
-        this.size_[id] = value[DATA_SIZE] ?? 0;
-        this.count_[id] = value[DATA_COUNT] ?? 0;
-        this.directory_[id] = value[DATA_IS_DIRECTORY] ? 1 : 0;
-        this.dataCache_.set(id, [this.size_[id], this.count_[id], this.directory_[id]]);
+        const page = this.getPage_(id);
+        const index = this.nodeIndex_(id);
+        page.size[index] = value[DATA_SIZE] ?? 0;
+        page.count[index] = value[DATA_COUNT] ?? 0;
+        page.directory[index] = value[DATA_IS_DIRECTORY] ? 1 : 0;
+        this.dataCache_.set(id, [page.size[index], page.count[index], page.directory[index]]);
     }
 
     hasChildren(id: number): boolean {
-        return this.firstChild_[id] !== NO_ID;
+        return this.getFirstChildId_(id) !== NO_ID;
     }
 
     private getNode_(id: number): DataNode {
@@ -308,77 +335,115 @@ class CompactFileInfoStore {
     }
 
     private appendChild_(parentId: number, childId: number) {
-        if (this.firstChild_[parentId] === NO_ID) {
-            this.firstChild_[parentId] = childId;
-            this.lastChild_[parentId] = childId;
+        const parentPage = this.getPage_(parentId);
+        const parentIndex = this.nodeIndex_(parentId);
+        const lastChild = parentPage.lastChild;
+        if (!lastChild) {
+            throw new Error("file_info tree was already finalized.");
+        }
+
+        if (parentPage.firstChild[parentIndex] === NO_ID) {
+            parentPage.firstChild[parentIndex] = childId;
+            lastChild[parentIndex] = childId;
         } else {
-            this.nextSibling_[this.lastChild_[parentId]] = childId;
-            this.lastChild_[parentId] = childId;
+            const lastChildId = lastChild[parentIndex];
+            const lastChildPage = this.getPage_(lastChildId);
+            lastChildPage.nextSibling[this.nodeIndex_(lastChildId)] = childId;
+            lastChild[parentIndex] = childId;
         }
     }
 
     private exists_(id: number): boolean {
-        return id > 0 && id <= this.maxId_ && this.keyOffset_[id] !== NO_ID;
-    }
-
-    private ensureCapacity_(id: number) {
-        if (id < this.capacity_) {
-            return;
+        if (id <= 0 || id > this.maxId_) {
+            return false;
         }
 
-        let nextCapacity = this.capacity_;
-        while (id >= nextCapacity) {
-            nextCapacity *= 2;
+        const page = this.getPage_(id);
+        return this.existsInPage_(id, page, this.nodeIndex_(id));
+    }
+
+    private existsInPage_(id: number, page: FileInfoPage, index: number): boolean {
+        return id > 0 && id <= this.maxId_ && page.keyOffset[index] !== NO_ID;
+    }
+
+    private getParentId_(id: number): number {
+        const page = this.getPage_(id);
+        return page.parent[this.nodeIndex_(id)];
+    }
+
+    private getFirstChildId_(id: number): number {
+        const page = this.getPage_(id);
+        return page.firstChild[this.nodeIndex_(id)];
+    }
+
+    private getNextSiblingId_(id: number): number {
+        const page = this.getPage_(id);
+        return page.nextSibling[this.nodeIndex_(id)];
+    }
+
+    private getPage_(id: number): FileInfoPage {
+        return this.pages_[this.pageIndex_(id)];
+    }
+
+    private ensurePage_(id: number): FileInfoPage {
+        const pageIndex = this.pageIndex_(id);
+        while (pageIndex >= this.pages_.length) {
+            this.pages_.push(this.createPage_());
         }
-
-        const oldCapacity = this.capacity_;
-        this.parent_ = this.growInt32_(this.parent_, nextCapacity, oldCapacity);
-        this.firstChild_ = this.growInt32_(this.firstChild_, nextCapacity, oldCapacity);
-        this.lastChild_ = this.growInt32_(this.lastChild_, nextCapacity, oldCapacity);
-        this.nextSibling_ = this.growInt32_(this.nextSibling_, nextCapacity, oldCapacity);
-        this.size_ = this.growFloat64_(this.size_, nextCapacity);
-        this.count_ = this.growFloat64_(this.count_, nextCapacity);
-        this.directory_ = this.growUint8_(this.directory_, nextCapacity);
-        this.keyOffset_ = this.growInt32_(this.keyOffset_, nextCapacity, oldCapacity);
-        this.keyLength_ = this.growUint32_(this.keyLength_, nextCapacity);
-        this.capacity_ = nextCapacity;
+        return this.pages_[pageIndex];
     }
 
-    private growInt32_(source: Int32Array, nextCapacity: number, oldCapacity: number): Int32Array {
-        const next = new Int32Array(nextCapacity);
-        next.set(source);
-        next.fill(NO_ID, oldCapacity);
-        return next;
+    private createPage_(): FileInfoPage {
+        const page: FileInfoPage = {
+            parent: new Int32Array(NODE_PAGE_SIZE),
+            firstChild: new Int32Array(NODE_PAGE_SIZE),
+            lastChild: new Int32Array(NODE_PAGE_SIZE),
+            nextSibling: new Int32Array(NODE_PAGE_SIZE),
+            size: new Float64Array(NODE_PAGE_SIZE),
+            count: new Uint32Array(NODE_PAGE_SIZE),
+            directory: new Uint8Array(NODE_PAGE_SIZE),
+            keyOffset: new Int32Array(NODE_PAGE_SIZE),
+            keyLength: new Uint16Array(NODE_PAGE_SIZE),
+        };
+        page.parent.fill(NO_ID);
+        page.firstChild.fill(NO_ID);
+        page.lastChild!.fill(NO_ID);
+        page.nextSibling.fill(NO_ID);
+        page.keyOffset.fill(NO_ID);
+        return page;
     }
 
-    private growFloat64_(source: Float64Array, nextCapacity: number): Float64Array {
-        const next = new Float64Array(nextCapacity);
-        next.set(source);
-        return next;
+    private releaseLastChild_() {
+        // lastChild is only needed while appending nodes. Dropping it after the
+        // final tree has nextSibling links saves one Int32Array per node page.
+        for (const page of this.pages_) {
+            page.lastChild = null;
+        }
     }
 
-    private growUint8_(source: Uint8Array, nextCapacity: number): Uint8Array {
-        const next = new Uint8Array(nextCapacity);
-        next.set(source);
-        return next;
+    private pageIndex_(id: number): number {
+        return Math.floor(id / NODE_PAGE_SIZE);
     }
 
-    private growUint32_(source: Uint32Array, nextCapacity: number): Uint32Array {
-        const next = new Uint32Array(nextCapacity);
-        next.set(source);
-        return next;
+    private nodeIndex_(id: number): number {
+        return id % NODE_PAGE_SIZE;
     }
 
     private setKeyBytes_(id: number, value: string) {
         const bytes = this.textEncoder_.encode(value);
+        if (bytes.length > MAX_KEY_LENGTH) {
+            throw new Error("file_info key is too long.");
+        }
         if (this.keyBytesSize_ + bytes.length > MAX_KEY_POOL_OFFSET) {
             throw new Error("file_info key byte pool is too large.");
         }
 
         const offset = this.keyBytesSize_;
         this.writeKeyBytes_(offset, bytes);
-        this.keyOffset_[id] = offset;
-        this.keyLength_[id] = bytes.length;
+        const page = this.getPage_(id);
+        const index = this.nodeIndex_(id);
+        page.keyOffset[index] = offset;
+        page.keyLength[index] = bytes.length;
         this.keyBytesSize_ += bytes.length;
     }
 
