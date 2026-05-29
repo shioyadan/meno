@@ -21,8 +21,12 @@ function usage() {
     console.error("Usage: node file_info.js <path_to_directory> > out.log");
 }
 
+function encodeKey(key) {
+    return JSON.stringify(key);
+}
+
 function encode(id, parentID, key, isDirectory, fileCount, size) {
-    return `${id}\t${parentID}\t${key}\t${isDirectory ? 1 : 0}\t${fileCount}\t${size}\n`;
+    return `${id}\t${parentID}\t${encodeKey(key)}\t${isDirectory ? 1 : 0}\t${fileCount}\t${size}\n`;
 }
 
 // stdout may be a pipe to a slower compressor. If write() returns false,

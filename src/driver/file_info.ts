@@ -519,17 +519,26 @@ class FileInfoDriver {
 
             const id = Number(args[0]);
             const parentID = Number(args[1]);
-            if (!Number.isInteger(id) || !Number.isInteger(parentID) || id <= 0 || parentID < 0) {
+            const key = this.decodeKey_(args[2]);
+            const directoryValue = Number(args[3]);
+            const fileCount = Number(args[4]);
+            const size = Number(args[5]);
+            if (
+                !Number.isInteger(id) ||
+                !Number.isInteger(parentID) ||
+                id <= 0 ||
+                parentID < 0 ||
+                key === null ||
+                (directoryValue !== 0 && directoryValue !== 1) ||
+                !Number.isFinite(fileCount) ||
+                !Number.isFinite(size)
+            ) {
                 errorCallback("This file may not be a file information file.");
                 isFileInfo = false;
                 return;
             }
 
-            const key = args[2];
-            const isDirectory = Number(args[3]) == 1;
-            const fileCount = Number(args[4]);
-            const size = Number(args[5]);
-            store.addNode(id, parentID, key, isDirectory, fileCount, size);
+            store.addNode(id, parentID, key, directoryValue === 1, fileCount, size);
 
             if (lineNum % (1024 * 128) == 0) {
                 this.count = lineNum;
@@ -561,6 +570,19 @@ class FileInfoDriver {
             }, 0);
         });
         reader.load();
+    }
+
+    private decodeKey_(encodedKey: string): string|null {
+        if (!encodedKey.startsWith("\"")) {
+            return encodedKey;
+        }
+
+        try {
+            const key = JSON.parse(encodedKey);
+            return typeof key === "string" ? key : null;
+        } catch {
+            return null;
+        }
     }
 
     fileNodeToStr(fileNode: DataNode, rootNode: DataNode, dataIndex: number, detailed: boolean) {
