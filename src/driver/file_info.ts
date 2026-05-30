@@ -573,12 +573,8 @@ class FileInfoDriver {
     }
 
     private decodeKey_(encodedKey: string): string|null {
-        if (!encodedKey.startsWith("\"")) {
-            return encodedKey;
-        }
-
         try {
-            const key = JSON.parse(encodedKey);
+            const key = JSON.parse(`"${encodedKey}"`);
             return typeof key === "string" ? key : null;
         } catch {
             return null;

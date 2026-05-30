@@ -8,6 +8,8 @@ Small helper scripts for generating input files for Meno. The generated
 Dumps a directory tree as tab-separated records that can be loaded by
 `src/driver/file_info.ts`. It streams records to stdout and respects stdout
 backpressure so large trees do not build an unbounded output queue in memory.
+File names use JSON-style escaping without surrounding quotes, so tabs and
+newlines in real file names do not appear as raw delimiters in the dump.
 
 ## `file_info.sh`
 

@@ -22,7 +22,7 @@ function usage() {
 }
 
 function encodeKey(key) {
-    return JSON.stringify(key);
+    return JSON.stringify(key).slice(1, -1);
 }
 
 function encode(id, parentID, key, isDirectory, fileCount, size) {
