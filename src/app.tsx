@@ -26,11 +26,18 @@ const App = () => {
 
         // コンテキストメニューを閉じるためのクリックリスナー
         const handleClickOutside = () => {
-            setContextMenu(prev => ({ ...prev, show: false }));
+            setContextMenu(prev => ({ ...prev, show: false, targetNode: null }));
+        };
+        const handleTreeReleased = () => {
+            setContextMenu(prev => ({ ...prev, show: false, targetNode: null }));
         };
 
         document.addEventListener('click', handleClickOutside);
-        return () => document.removeEventListener('click', handleClickOutside);
+        storeRef.current.on(CHANGE.TREE_RELEASED, handleTreeReleased);
+        return () => {
+            document.removeEventListener('click', handleClickOutside);
+            storeRef.current.off(CHANGE.TREE_RELEASED, handleTreeReleased);
+        };
     }, []);
 
     const showContextMenu = (x: number, y: number, targetNode: any) => {
@@ -43,7 +50,7 @@ const App = () => {
     };
 
     const hideContextMenu = () => {
-        setContextMenu(prev => ({ ...prev, show: false }));
+        setContextMenu(prev => ({ ...prev, show: false, targetNode: null }));
     };
 
     const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
