@@ -10,6 +10,13 @@ const DATA_COUNT = 1;
 const DATA_IS_DIRECTORY = 2;
 const MAX_KEY_POOL_OFFSET = 0x7fffffff;
 const MAX_KEY_LENGTH = 0xffff;
+const MAX_KEY_INTERN_CHARS = 128;
+const MAX_KEY_INTERN_ENTRIES = 256 * 1024;
+
+type KeyRef = {
+    offset: number;
+    length: number;
+};
 
 type FileInfoPage = {
     parent: Int32Array<ArrayBufferLike>;
@@ -102,6 +109,7 @@ class CompactFileInfoStore {
     private pages_: FileInfoPage[] = [];
     private keyPages_: Uint8Array<ArrayBufferLike>[] = [];
     private keyBytesSize_ = 0;
+    private keyIntern_ = new Map<string, KeyRef>();
     private textEncoder_ = new TextEncoder();
     private textDecoder_ = new TextDecoder("utf-8");
 
@@ -430,7 +438,16 @@ class CompactFileInfoStore {
     }
 
     private setKeyBytes_(id: number, value: string) {
+        if (this.shouldInternKey_(value)) {
+            const cached = this.keyIntern_.get(value);
+            if (cached) {
+                this.setKeyRef_(id, cached);
+                return;
+            }
+        }
+
         const bytes = this.textEncoder_.encode(value);
+
         if (bytes.length > MAX_KEY_LENGTH) {
             throw new Error("file_info key is too long.");
         }
@@ -440,11 +457,33 @@ class CompactFileInfoStore {
 
         const offset = this.keyBytesSize_;
         this.writeKeyBytes_(offset, bytes);
+        const ref = { offset, length: bytes.length };
+        this.setKeyRef_(id, ref);
+        this.keyBytesSize_ += bytes.length;
+
+        if (this.shouldInternKey_(value)) {
+            this.rememberKey_(value, ref);
+        }
+    }
+
+    private setKeyRef_(id: number, ref: KeyRef) {
         const page = this.getPage_(id);
         const index = this.nodeIndex_(id);
-        page.keyOffset[index] = offset;
-        page.keyLength[index] = bytes.length;
-        this.keyBytesSize_ += bytes.length;
+        page.keyOffset[index] = ref.offset;
+        page.keyLength[index] = ref.length;
+    }
+
+    private shouldInternKey_(value: string): boolean {
+        return value.length <= MAX_KEY_INTERN_CHARS;
+    }
+
+    private rememberKey_(value: string, ref: KeyRef) {
+        // Existing nodes keep valid byte-pool offsets after cache eviction.
+        // This Map is only a bounded dedup index for keys seen while loading.
+        if (this.keyIntern_.size >= MAX_KEY_INTERN_ENTRIES) {
+            this.keyIntern_.clear();
+        }
+        this.keyIntern_.set(value, ref);
     }
 
     private writeKeyBytes_(offset: number, bytes: Uint8Array) {
