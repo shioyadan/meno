@@ -246,6 +246,10 @@ class Store {
             this.searchProgress = progress;
             // 進捗だけの更新ではCanvasを再描画しない。
             this.trigger(CHANGE.SEARCH_PROGRESS);
+        }, results => {
+            if (controller.signal.aborted || this.searchController_ !== controller) return;
+            this.searchResults = results;
+            this.trigger(CHANGE.SEARCH_RESULTS_CHANGED);
         }).then(results => {
             if (!results || this.searchController_ !== controller) return;
             this.searchResults = results;
@@ -256,6 +260,7 @@ class Store {
         }).catch(error => {
             if (this.searchController_ !== controller) return;
             console.error("Search failed:", error);
+            this.searchResults = new SearchResults();
             this.searching = false;
             this.searchProgress = 0;
             this.searchError = "Search failed";

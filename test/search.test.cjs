@@ -58,6 +58,17 @@ async function settled(store) {
     throw new Error('Search did not settle');
 }
 
+function paceTraversal(t, root) {
+    // 小さな木でも入退場ごとに時間枠を越え、途中表示と取消を再現できるようにする。
+    let now = 0;
+    t.mock.method(performance, 'now', () => now);
+    const walk = root.walkForSearch.bind(root);
+    root.walkForSearch = function* () {
+        for (const visit of walk()) { now += 9; yield visit; }
+    };
+    return milliseconds => { now += milliseconds; };
+}
+
 test('search preserves case-insensitive matching and excludes overlapping ancestor totals', async () => {
     const root = fixture();
     const result = await search(root, 'mAtCh');
@@ -93,6 +104,65 @@ test('Unicode and special property names remain searchable', async () => {
     assert.equal((await search(root, '__proto__')).totalSize, 5);
     assert.equal((await search(root, '本語😀')).totalSize, 7);
     assert.equal((await search(root, 'space name')).totalSize, 11);
+});
+
+test('matched IDs remain distinct across bit and page boundaries and sparse IDs', async () => {
+    const ids = [-1, 0, 31, 32, 4095, 4096, 2147483647];
+    const children = ids.map(id => node(id, 'match-' + id, 1));
+    const root = node(100, '/root', children.length, children);
+    const result = await search(root, 'match');
+    assert.equal(result.count, ids.length);
+    for (const child of children) assert.equal(result.matches(child), true);
+    for (const id of [1, 30, 33, 4094, 4097, 2147483646]) {
+        assert.equal(result.matches(node(id, 'match-unvisited', 1)), false);
+    }
+    assert.equal(result.matches(root), false);
+});
+
+test('partial results include only discovered matches and consistent open ancestor totals', async t => {
+    const root = fixture();
+    const directory = root.children['MATCH-dir'];
+    const nodes = [root, directory, ...Object.values(directory.children), root.children['match-outside']];
+    paceTraversal(t, root);
+    const snapshots = [];
+    const result = await searchTree(root, 'match', new AbortController().signal, () => {}, partial => {
+        const matches = nodes.filter(value => partial.matches(value));
+        assert.equal(partial.count, matches.length);
+        let total = 0;
+        for (const value of matches) {
+            let parent = value.parent;
+            while (parent && !partial.matches(parent)) parent = parent.parent;
+            if (!parent) total += value.data[0];
+        }
+        assert.equal(partial.totalSize, total);
+        for (const value of nodes) {
+            const descendants = matches.filter(match => {
+                let parent = match.parent;
+                while (parent && parent !== value) parent = parent.parent;
+                return parent === value;
+            }).length;
+            assert.equal(partial.descendantCounts.get(value.id) ?? 0, descendants);
+        }
+        snapshots.push({ count: partial.count, time: performance.now(), ids: matches.map(value => value.id) });
+    });
+    assert.deepEqual(snapshots[0].ids, [directory.id]);
+    assert.ok(snapshots.every((snapshot, i) => !i || snapshot.time - snapshots[i - 1].time >= 50));
+    assert.equal(result.count, 3);
+    assert.equal(result.totalSize, 35);
+    assert.equal(result.descendantCounts.get(root.id), 3);
+});
+
+test('slow partial-result listeners leave time for traversal between redraws', async t => {
+    const root = node(1, '/root', 20,
+        Array.from({ length: 20 }, (_, i) => node(i + 2, 'match-' + i, 1)));
+    const advance = paceTraversal(t, root);
+    const updates = [];
+    await searchTree(root, 'match', new AbortController().signal, undefined, () => {
+        updates.push(performance.now());
+        advance(80);
+    });
+    assert.ok(updates.length > 1);
+    assert.ok(updates.every((time, i) => !i || time - updates[i - 1] >= 80 + 50));
 });
 
 test('wide compact trees cross node pages and yield to other event-loop work', async () => {
@@ -205,7 +275,9 @@ test('ordinary and compact trees support very deep hierarchies', async () => {
     for (let id = 14999; id >= 1; id--) ordinary = node(id, 'match', 1, [ordinary]);
     for (let id = 1; id <= 15000; id++) rows.push(row(id, id - 1, 'match', id < 15000, 1));
     for (const root of [ordinary, await load(rows.join(''))]) {
-        const result = await search(root, 'match');
+        const result = await searchTree(root, 'match', new AbortController().signal, undefined, partial => {
+            assert.equal(partial.descendantCounts.get(root.id) ?? 0, partial.count - 1);
+        });
         assert.equal(result.count, 15000);
         assert.equal(result.totalSize, 1);
         assert.equal(result.descendantCounts.get(1), 14999);
@@ -273,6 +345,71 @@ test('releasing a tree cancels its pending search', async () => {
     assert.equal(store.searchResults.count, 0);
 });
 
+test('published partial highlights are cleared or replaced without late updates', async t => {
+    for (const action of ['clear', 'release', 'query', 'root', 'file']) {
+        await t.test(action, async t => {
+            const root = fixture();
+            paceTraversal(t, root);
+            const store = storeFor(root);
+            let partial;
+            let stoppedCount;
+            const completions = [];
+            store.on(CHANGE.SEARCH_RESULTS_CHANGED, () => {
+                if (!store.searching) completions.push(store.searchQuery);
+                if (partial || !store.searching || !store.searchResults.count) return;
+                partial = store.searchResults;
+                assert.equal(partial.matches(root.children['MATCH-dir']), true);
+                assert.equal(partial.matches(root.children['match-outside']), false);
+                stoppedCount = partial.count;
+                if (action === 'clear') store.trigger(ACTION.CLEAR_SEARCH);
+                if (action === 'release') store.releaseCurrentTree_();
+                if (action === 'query') store.trigger(ACTION.SEARCH_NODES, 'other');
+                if (action === 'root') store.trigger(ACTION.SET_ROOT_NODE, root.children['MATCH-dir']);
+                if (action === 'file') store.trigger(ACTION.FILE_IMPORT,
+                    row(1, 0, 'replacement', true, 0) + row(2, 1, 'match-new', false, 99));
+                assert.notEqual(store.searchResults, partial);
+                assert.equal(store.searchResults.count, 0);
+            });
+            store.trigger(ACTION.SEARCH_NODES, 'match');
+            if (action === 'file') await new Promise(resolve => store.on(CHANGE.TREE_LOADED, resolve));
+            await settled(store);
+            await delay(20);
+            assert.ok(partial);
+            assert.equal(partial.count, stoppedCount);
+            const expectedCount = { clear: 0, release: 0, query: 1, root: 2, file: 1 }[action];
+            assert.equal(store.searchResults.count, expectedCount);
+            if (action === 'query') assert.deepEqual(completions, ['other']);
+            if (action === 'root') assert.equal(store.searchResults.matches(root.children['match-outside']), false);
+            if (action === 'file') assert.equal(store.searchResults.totalSize, 99);
+        });
+    }
+});
+
+test('a search failure removes already published partial highlights', async t => {
+    const root = fixture();
+    paceTraversal(t, root);
+    const walk = root.walkForSearch.bind(root);
+    root.walkForSearch = function* () {
+        for (const visit of walk()) {
+            if (visit.entering && visit.id === 3) throw new Error('Expected partial traversal failure');
+            yield visit;
+        }
+    };
+    Object.defineProperty(root, 'searchNodeCount', { value: 5 });
+    t.mock.method(console, 'error', () => {});
+    const store = storeFor(root);
+    let hadPartial = false;
+    store.on(CHANGE.SEARCH_RESULTS_CHANGED, () => {
+        if (store.searching && store.searchResults.count) hadPartial = true;
+    });
+    store.trigger(ACTION.SEARCH_NODES, 'match');
+    await settled(store);
+    assert.equal(hadPartial, true);
+    assert.equal(store.searchError, 'Search failed');
+    assert.equal(store.searchResults.count, 0);
+    assert.equal(store.searchResults.matches(root.children['MATCH-dir']), false);
+});
+
 test('loading another file searches the replacement tree only', async () => {
     const store = storeFor(fixture());
     store.trigger(ACTION.SEARCH_NODES, 'match');
@@ -336,4 +473,37 @@ test('renderer highlights direct and omitted descendant matches using visible ar
     outlines.length = 0;
     renderer.render(canvas, root, null, 1000, 800, [0, 0, 1000, 800], 0, () => '', 'dark', new SearchResults());
     assert.equal(outlines.filter(x => ['#FFD700', '#FFA500'].includes(x.color)).length, 0);
+});
+
+test('renderer updates discovered direct and hidden matches before the search finishes', async t => {
+    const root = fixture();
+    const directory = root.children['MATCH-dir'];
+    for (let id = 10; id < 20; id++) {
+        const padding = node(id, 'padding-' + id, 0);
+        padding.parent = directory;
+        directory.children[padding.key] = padding;
+    }
+    paceTraversal(t, root);
+    const renderer = new Renderer();
+    const visible = [root, directory, root.children['match-outside']];
+    renderer.treeMap_.createTreeMap = () => visible.map((fileNode, i) => ({
+        fileNode, key: fileNode.key, rect: [i * 100, 0, i * 100 + 90, 80], level: i ? 1 : 0, isLeaf: i > 0
+    }));
+    const outlines = [];
+    const context = {
+        fillRect() {}, fillText() {}, strokeText() {},
+        strokeRect(...rect) { outlines.push({ color: this.strokeStyle, rect }); }
+    };
+    const canvas = { width: 1000, height: 800, getContext: () => context };
+    let sawHidden = false;
+    await searchTree(root, 'match', new AbortController().signal, () => {}, partial => {
+        if (partial.count > 2) return;
+        outlines.length = 0;
+        renderer.render(canvas, root, null, 1000, 800, [0, 0, 1000, 800], 0, () => '', 'dark', partial);
+        assert.deepEqual(outlines.filter(x => x.color === '#FFD700').map(x => x.rect), [[100, 0, 90, 80]]);
+        const orange = outlines.filter(x => x.color === '#FFA500').map(x => x.rect);
+        assert.deepEqual(orange, partial.count === 2 ? [[100, 0, 90, 80]] : []);
+        if (partial.count === 2) sawHidden = true;
+    });
+    assert.equal(sawHidden, true);
 });
