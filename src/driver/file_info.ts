@@ -587,7 +587,7 @@ class FileInfoDriver {
         });
 
         reader.onClose(() => {
-            if (!isFileInfo) {
+            if (!isFileInfo || reader.isCanceled()) {
                 return;
             }
 
@@ -601,8 +601,16 @@ class FileInfoDriver {
             progressCallback(root.key);
 
             setTimeout(() => {
+                if (reader.isCanceled()) {
+                    return;
+                }
+
                 store.finalize(progressCallback);
     
+                if (reader.isCanceled()) {
+                    return;
+                }
+
                 this.count = root.data[DATA_COUNT];
                 progressCallback(root.key);
                 finishCallback(root);

@@ -99,8 +99,11 @@ class FileReader {
 
     cancel(onCanceled?: () => void) {
         this.cancel_ = true;
-        if (this.lineReader_) {
-            this.lineReader_.cancel(onCanceled);
+        this.clearHandlers_();
+        const lineReader = this.lineReader_;
+        this.lineReader_ = null;
+        if (lineReader) {
+            lineReader.cancel(onCanceled);
         } else {
             onCanceled?.();
         }
@@ -124,6 +127,12 @@ class FileReader {
         this.errorHandler_ = errorHandler;
     }
 
+    private clearHandlers_() {
+        this.readLineHandler_ = null;
+        this.closeHandler_ = null;
+        this.errorHandler_ = null;
+    }
+
     private createLineReader_(): FileLineReader {
         if (typeof this.source_ === "string") {
             // 埋め込み入力も擬似的なファイル stream として扱う。
@@ -141,28 +150,32 @@ class FileReader {
 
     private async loadFromSource_() {
         this.lineReader_ = this.createLineReader_();
-        await this.lineReader_.load(
-            (line) => {
-                if (line.endsWith("\r")) {
-                    line = line.slice(0, -1);
+        try {
+            await this.lineReader_.load(
+                (line) => {
+                    if (line.endsWith("\r")) {
+                        line = line.slice(0, -1);
+                    }
+                    if (!this.cancel_) {
+                        this.readLineHandler_?.(line);
+                    }
+                },
+                () => {
+                    if (!this.cancel_) {
+                        this.closeHandler_?.();
+                    }
+                },
+                (error) => {
+                    console.error("Failed to read file:", error);
+                    if (!this.cancel_) {
+                        this.errorHandler_?.(error);
+                        this.cancel();
+                    }
                 }
-                if (!this.cancel_) {
-                    this.readLineHandler_?.(line);
-                }
-            },
-            () => {
-                if (!this.cancel_) {
-                    this.closeHandler_?.();
-                }
-            },
-            (error) => {
-                console.error("Failed to read file:", error);
-                if (!this.cancel_) {
-                    this.errorHandler_?.(error);
-                    this.cancel();
-                }
-            }
-        );
+            );
+        } finally {
+            this.clearHandlers_();
+        }
     }
 
     load() {
