@@ -100,16 +100,103 @@ test('wide compact trees cross node pages and yield to other event-loop work', a
     for (let id = 2; id <= 270001; id++) rows.push(row(id, 1, 'item-' + id, false, 1));
     const root = await load(rows.join(''));
     let ticks = 0;
+    const progress = [];
     const timer = setInterval(() => { ticks++; }, 1);
     try {
-        const result = await search(root, 'item');
+        const result = await searchTree(root, 'item', new AbortController().signal, value => progress.push(value));
         assert.equal(result.count, 270000);
         assert.equal(result.totalSize, 270000);
         assert.equal(result.descendantCounts.size, 1);
         assert.ok(ticks > 2, `Only ${ticks} event-loop ticks occurred`);
         assert.equal(root.store_.nodeCache_.size, 1);
         assert.equal(root.store_.childrenCache_.size, 0);
+        assert.equal(root.searchNodeCount, 270001);
+        assert.equal(progress[0], 0);
+        assert.equal(progress.at(-1), 1);
+        assert.ok(progress.some(value => value > 0 && value < 1));
+        assert.ok(progress.every((value, index) => value !== null && value >= 0 && value <= 1
+            && (index === 0 || value > progress[index - 1])));
     } finally { clearInterval(timer); }
+});
+
+test('unknown totals are counted asynchronously and reused on the next search', async () => {
+    const root = fixture();
+    const original = root.walkForSearch.bind(root);
+    let traversals = 0;
+    root.walkForSearch = () => { traversals++; return original(); };
+    const first = [];
+    const result = await searchTree(root, 'match', new AbortController().signal, value => first.push(value));
+    assert.equal(traversals, 2);
+    assert.equal(first[0], null);
+    assert.ok(first.includes(0));
+    assert.equal(first.at(-1), 1);
+    assert.equal(result.count, 3);
+    const second = [];
+    await searchTree(root, 'other', new AbortController().signal, value => second.push(value));
+    assert.equal(traversals, 3);
+    assert.equal(second[0], 0);
+    assert.equal(second.at(-1), 1);
+});
+
+test('subtree progress counts the selected subtree including directories', async () => {
+    const root = await load(row(1, 0, '/', true, 0) + row(2, 1, 'dir', true, 0)
+        + row(3, 2, 'match', false, 5) + row(4, 1, 'other', false, 1));
+    assert.equal(root.searchNodeCount, 4);
+    const subtree = root.children.dir;
+    assert.equal(subtree.searchNodeCount, null);
+    const progress = [];
+    const result = await searchTree(subtree, 'match', new AbortController().signal, value => progress.push(value));
+    assert.equal(result.count, 1);
+    assert.equal(result.totalSize, 5);
+    assert.equal(progress[0], null);
+    assert.equal(progress.at(-1), 1);
+});
+
+test('empty directory roots have one search node despite containing no files', async () => {
+    const root = await load(row(1, 0, '/empty', true, 0));
+    assert.equal(root.searchNodeCount, 1);
+    assert.equal(root.fileCount, 0);
+    const progress = [];
+    const result = await searchTree(root, 'empty', new AbortController().signal, value => progress.push(value));
+    assert.equal(result.count, 1);
+    assert.deepEqual(progress, [0, 1]);
+});
+
+test('canceling during counting does not publish further progress', async () => {
+    const controller = new AbortController();
+    const progress = [];
+    const result = await searchTree(fixture(), 'match', controller.signal, value => {
+        progress.push(value);
+        controller.abort();
+    });
+    assert.equal(result, null);
+    await delay(15);
+    assert.deepEqual(progress, [null]);
+});
+
+test('search progress events do not publish results and stop when a query is replaced', async () => {
+    const root = fixture();
+    const store = storeFor(root);
+    const updates = []; const completions = [];
+    store.on(CHANGE.SEARCH_RESULTS_CHANGED, () => {
+        if (!store.searching) completions.push(store.searchQuery);
+    });
+    store.on(CHANGE.SEARCH_PROGRESS, () => {
+        assert.equal(store.searchResults.count, 0);
+        updates.push({ query: store.searchQuery, value: store.searchProgress });
+        if (store.searchQuery === 'match') store.trigger(ACTION.SEARCH_NODES, 'other');
+    });
+    store.trigger(ACTION.SEARCH_NODES, 'match');
+    await settled(store);
+    assert.deepEqual(completions, ['other']);
+    assert.equal(updates.filter(update => update.query === 'match').length, 1);
+    assert.equal(updates.at(-1).query, 'other');
+    assert.equal(updates.at(-1).value, 1);
+    assert.equal(store.searchProgress, 1);
+    store.trigger(ACTION.CLEAR_SEARCH);
+    assert.equal(store.searchProgress, 0);
+    store.releaseCurrentTree_();
+    assert.equal(store.searchProgress, 0);
 });
 
 test('ordinary and compact trees support very deep hierarchies', async () => {

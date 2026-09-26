@@ -33,6 +33,10 @@ class DataNode {
         return this.children != null && Object.keys(this.children).length > 0;
     }
 
+    get searchNodeCount(): number|null {
+        return null;
+    }
+
     *walkForSearch(): Generator<SearchVisit> {
         function* children(node: DataNode): Generator<DataNode> {
             for (const key in node.children) {

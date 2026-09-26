@@ -251,6 +251,7 @@ const StatusBar = (props: {store: Store;}) => {
     const [searchTotalSize, setSearchTotalSize] = useState(0);
     const [rootSize, setRootSize] = useState(0);
     const [searching, setSearching] = useState(false);
+    const [searchProgress, setSearchProgress] = useState<number|null>(store.searchProgress);
     const [searchError, setSearchError] = useState<string|null>(null);
 
 
@@ -275,6 +276,7 @@ const StatusBar = (props: {store: Store;}) => {
             setSearchTotalSize(0);
             setRootSize(0);
             setSearching(false);
+            setSearchProgress(0);
             setSearchError(null);
         });
         store.on(CHANGE.SEARCH_RESULTS_CHANGED, () => {
@@ -282,10 +284,17 @@ const StatusBar = (props: {store: Store;}) => {
             setSearchQuery(store.searchQuery);
             setSearchTotalSize(store.searchResults.totalSize);
             setSearching(store.searching);
+            setSearchProgress(store.searchProgress);
             setSearchError(store.searchError);
         });
         setRootSize((store.currentRootNode && store.currentRootNode.data[0]) ? store.currentRootNode.data[0] : 0);
     }, []);
+
+    useEffect(() => {
+        const onProgress = () => setSearchProgress(store.searchProgress);
+        store.on(CHANGE.SEARCH_PROGRESS, onProgress);
+        return () => store.off(CHANGE.SEARCH_PROGRESS, onProgress);
+    }, [store]);
 
     const toPercent = (part: number, whole: number): string => {
         if (!whole || whole <= 0) return "0%";
@@ -295,7 +304,11 @@ const StatusBar = (props: {store: Store;}) => {
 
     const getSearchMessage = () => {
         if (!searchQuery) return "";
-        if (searching) return ` | Searching for "${searchQuery}"...`;
+        if (searching) {
+            return searchProgress === null
+                ? ` | Preparing search for "${searchQuery}"...`
+                : ` | Searching for "${searchQuery}"... ${Math.round(searchProgress * 100)}%`;
+        }
         if (searchError) return ` | ${searchError}`;
         if (searchResultsCount === 0) return ` | Search: "${searchQuery}" - No results found`;
         return ` | Search: "${searchQuery}" - ${searchResultsCount} result${searchResultsCount > 1 ? 's' : ''} found (Total: ${searchTotalSize}, ${toPercent(searchTotalSize, rootSize)} of root)`;
@@ -322,21 +335,25 @@ const StatusBar = (props: {store: Store;}) => {
 
 const LoadingBar = (props: {store: Store;}) => {
     const { store } = props;
-    const [visible, setVisible] = useState(false);
-    const [progress, setProgress] = useState(0);
+    const [loading, setLoading] = useState(false);
+    const [fileProgress, setFileProgress] = useState(0);
+    const [search, setSearch] = useState({ active: store.searching, progress: store.searchProgress });
     const [theme, setTheme] = useState(store.uiTheme);
 
     useEffect(() => {
         const onStart = () => {
-            setVisible(true);
-            setProgress(0);
+            setLoading(true);
+            setFileProgress(0);
         };
         const onProgress = (value: number) => {
-            setProgress(Math.max(0, Math.min(100, value * 100)));
+            setFileProgress(Math.max(0, Math.min(100, value * 100)));
         };
         const onEnd = () => {
-            setVisible(false);
-            setProgress(0);
+            setLoading(false);
+            setFileProgress(0);
+        };
+        const onSearch = () => {
+            setSearch({ active: store.searching, progress: store.searchProgress });
         };
         const onThemeChange = () => {
             setTheme(store.uiTheme);
@@ -345,24 +362,43 @@ const LoadingBar = (props: {store: Store;}) => {
         store.on(CHANGE.FILE_LOADING_START, onStart);
         store.on(CHANGE.FILE_LOAD_PROGRESS, onProgress);
         store.on(CHANGE.FILE_LOADING_END, onEnd);
+        store.on(CHANGE.SEARCH_RESULTS_CHANGED, onSearch);
+        store.on(CHANGE.SEARCH_PROGRESS, onSearch);
+        store.on(CHANGE.TREE_RELEASED, onSearch);
         store.on(CHANGE.CHANGE_UI_THEME, onThemeChange);
 
         return () => {
             store.off(CHANGE.FILE_LOADING_START, onStart);
             store.off(CHANGE.FILE_LOAD_PROGRESS, onProgress);
             store.off(CHANGE.FILE_LOADING_END, onEnd);
+            store.off(CHANGE.SEARCH_RESULTS_CHANGED, onSearch);
+            store.off(CHANGE.SEARCH_PROGRESS, onSearch);
+            store.off(CHANGE.TREE_RELEASED, onSearch);
             store.off(CHANGE.CHANGE_UI_THEME, onThemeChange);
         };
     }, [store]);
 
-    if (!visible) {
+    if (!loading && !search.active) {
         return null;
     }
 
+    const progress = loading ? fileProgress : (search.progress === null ? null : Math.round(search.progress * 100));
+    const label = progress === null ? "Preparing search..." : `Searching ${progress}%`;
+    const color = loading
+        ? (theme === "dark" ? "#6AA9FF" : "#1F6FEB")
+        : (theme === "dark" ? "#4ADE80" : "#16A34A");
+
     return (
         <div
+            role="progressbar"
+            aria-label={loading ? "File loading progress" : "Search progress"}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progress ?? undefined}
+            aria-valuetext={loading ? undefined : label}
             style={{
                 height: "2px",
+                flexShrink: 0,
                 width: "100%",
                 backgroundColor: theme == "dark" ? "#383B41" : "#D7DAE2",
             }}
@@ -370,8 +406,9 @@ const LoadingBar = (props: {store: Store;}) => {
             <div
                 style={{
                     height: "100%",
-                    width: `${progress}%`,
-                    backgroundColor: theme == "dark" ? "#6AA9FF" : "#1F6FEB",
+                    width: `${progress ?? 100}%`,
+                    backgroundColor: color,
+                    opacity: progress === null ? 0.35 : 1,
                     transition: "width 120ms linear",
                 }}
             />

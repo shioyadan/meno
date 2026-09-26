@@ -100,6 +100,10 @@ class CompactFileInfoNode {
     walkForSearch(): Generator<SearchVisit> {
         return this.store_.walkForSearch(this.nodeId_);
     }
+
+    get searchNodeCount(): number|null {
+        return this.store_.getSearchNodeCount(this.nodeId_);
+    }
 }
 
 // file_info dumps can contain millions of entries. Keeping every entry as a
@@ -109,6 +113,7 @@ class CompactFileInfoNode {
 class CompactFileInfoStore {
     private maxId_ = 0;
     private rootId_ = NO_ID;
+    private nodeCount_: number|null = null;
 
     private pages_: FileInfoPage[] = [];
     private keyPages_: Uint8Array<ArrayBufferLike>[] = [];
@@ -189,6 +194,11 @@ class CompactFileInfoStore {
         }
         this.releaseLastChild_();
         this.dataCache_.clear();
+        this.nodeCount_ = count;
+    }
+
+    getSearchNodeCount(id: number): number|null {
+        return id === this.rootId_ ? this.nodeCount_ : null;
     }
 
     getRoot(): DataNode|null {

@@ -45,6 +45,7 @@ enum CHANGE {
     CHANGE_DATA_INDEX,
     ROOT_NODE_CHANGED,
     SEARCH_RESULTS_CHANGED,
+    SEARCH_PROGRESS,
 };
 
 class Store {
@@ -72,6 +73,7 @@ class Store {
     searchQuery: string = "";
     searchResults = new SearchResults();
     searching = false;
+    searchProgress: number|null = 0;
     searchError: string|null = null;
     private searchController_: AbortController|null = null;
 
@@ -112,6 +114,7 @@ class Store {
         this.pointedFileNode = null;
         this.searchResults = new SearchResults();
         this.searching = false;
+        this.searchProgress = 0;
         this.searchError = null;
         this.treeMapRenderer.clear();
         this.trigger(CHANGE.TREE_RELEASED);
@@ -232,21 +235,29 @@ class Store {
         this.searchQuery = query;
         this.searchResults = new SearchResults();
         this.searchError = null;
+        this.searchProgress = 0;
         const tree = this.tree;
         this.searching = tree !== null && query.trim() !== "";
         this.trigger(CHANGE.SEARCH_RESULTS_CHANGED);
         if (!tree || !this.searching) return;
 
-        searchTree(tree, query, controller.signal).then(results => {
+        searchTree(tree, query, controller.signal, progress => {
+            if (controller.signal.aborted || this.searchController_ !== controller) return;
+            this.searchProgress = progress;
+            // 進捗だけの更新ではCanvasを再描画しない。
+            this.trigger(CHANGE.SEARCH_PROGRESS);
+        }).then(results => {
             if (!results || this.searchController_ !== controller) return;
             this.searchResults = results;
             this.searching = false;
+            this.searchProgress = 1;
             this.searchController_ = null;
             this.trigger(CHANGE.SEARCH_RESULTS_CHANGED);
         }).catch(error => {
             if (this.searchController_ !== controller) return;
             console.error("Search failed:", error);
             this.searching = false;
+            this.searchProgress = 0;
             this.searchError = "Search failed";
             this.searchController_ = null;
             this.trigger(CHANGE.SEARCH_RESULTS_CHANGED);
