@@ -1,4 +1,4 @@
-import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback, formatNumberCompact} from "./driver";
+import { FileReader, DataNode, SearchVisit, FinishCallback, ProgressCallback, ErrorCallback, formatNumberCompact} from "./driver";
 
 const NO_ID = -1;
 const NODE_PAGE_BITS = 18;
@@ -95,6 +95,10 @@ class CompactFileInfoNode {
 
     get hasChildren(): boolean {
         return this.store_.hasChildren(this.nodeId_);
+    }
+
+    walkForSearch(): Generator<SearchVisit> {
+        return this.store_.walkForSearch(this.nodeId_);
     }
 }
 
@@ -331,6 +335,34 @@ class CompactFileInfoStore {
 
     hasChildren(id: number): boolean {
         return this.getFirstChildId_(id) !== NO_ID;
+    }
+
+    *walkForSearch(rootId: number): Generator<SearchVisit> {
+        // 検索だけで全ノードのwrapperやchildren辞書を実体化しない。
+        let id = rootId;
+        let entering = true;
+        while (true) {
+            if (entering) {
+                const page = this.getPage_(id);
+                yield { entering: true, id, key: this.getKey(id), size: page.size[this.nodeIndex_(id)] };
+                const child = this.getFirstChildId_(id);
+                if (child !== NO_ID) {
+                    id = child;
+                    continue;
+                }
+            }
+
+            yield { entering: false, id };
+            if (id === rootId) return;
+            const sibling = this.getNextSiblingId_(id);
+            if (sibling !== NO_ID) {
+                id = sibling;
+                entering = true;
+            } else {
+                id = this.getParentId_(id);
+                entering = false;
+            }
+        }
     }
 
     private getNode_(id: number): DataNode {

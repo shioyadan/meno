@@ -11,6 +11,10 @@ type FileReaderSource = string | File;
 const EMBEDDED_FILE_NAME = "embedded.log";
 const TEXT_STREAM_CHUNK_SIZE = 1024 * 1024;
 
+type SearchVisit =
+    | { entering: true; id: number; key: string; size: number }
+    | { entering: false; id: number };
+
 class DataNode {
 
     children: Record<string, DataNode>|null = {};
@@ -27,6 +31,30 @@ class DataNode {
 
     get hasChildren() {
         return this.children != null && Object.keys(this.children).length > 0;
+    }
+
+    *walkForSearch(): Generator<SearchVisit> {
+        function* children(node: DataNode): Generator<DataNode> {
+            for (const key in node.children) {
+                yield node.children[key];
+            }
+        }
+
+        // 深い階層でも再帰スタックを使わず、各ノードの入退場で中断できる。
+        const stack = [{ node: this as DataNode, children: children(this) }];
+        yield { entering: true, id: this.id, key: this.key, size: this.data[0] ?? 0 };
+        while (stack.length) {
+            const frame = stack[stack.length - 1];
+            const child = frame.children.next();
+            if (child.done) {
+                stack.pop();
+                yield { entering: false, id: frame.node.id };
+            } else {
+                const node = child.value;
+                stack.push({ node, children: children(node) });
+                yield { entering: true, id: node.id, key: node.key, size: node.data[0] ?? 0 };
+            }
+        }
     }
 }
 
@@ -236,5 +264,5 @@ const calcDedupedTotalSize = (results: DataNode[] = [], dataIndex: number) => {
     return topLevel.reduce((acc, n) => acc + (n?.data[dataIndex] || 0), 0);
 };
 
-export { FileReader, DataNode, FinishCallback, 
+export { FileReader, DataNode, SearchVisit, FinishCallback,
     ProgressCallback, ErrorCallback, CloseHandler, ReadLineHandler, FileReadErrorHandler, fileNodeToStr, getRootSize, calcDedupedTotalSize, formatNumberCompact };

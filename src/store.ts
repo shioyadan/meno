@@ -1,6 +1,7 @@
 import {Loader, FileReader, DataNode} from "./loader";
 import TreeMapRenderer from "./tree_map_renderer";
 import {Settings} from "./settings";
+import {SearchResults, searchTree} from "./search";
 
 enum ACTION {
     TREE_LOAD,
@@ -69,7 +70,10 @@ class Store {
 
     // 検索機能
     searchQuery: string = "";
-    searchResults: DataNode[] = [];
+    searchResults = new SearchResults();
+    searching = false;
+    searchError: string|null = null;
+    private searchController_: AbortController|null = null;
 
     // アプリ設定
     settings = new Settings();
@@ -99,12 +103,16 @@ class Store {
     }
 
     releaseCurrentTree_() {
+        this.searchController_?.abort();
+        this.searchController_ = null;
         this.tree = null;
         this.originalTree = null;
         this.currentRootNode = null;
         this.pointedPath = "";
         this.pointedFileNode = null;
-        this.searchResults = [];
+        this.searchResults = new SearchResults();
+        this.searching = false;
+        this.searchError = null;
         this.treeMapRenderer.clear();
         this.trigger(CHANGE.TREE_RELEASED);
     }
@@ -185,6 +193,7 @@ class Store {
                 this.currentRootNode = nodeToSetAsRoot;
                 this.tree = nodeToSetAsRoot;
                 this.treeMapRenderer.clear(); // キャッシュをクリア
+                this.startSearch_(this.searchQuery);
                 this.trigger(CHANGE.ROOT_NODE_CHANGED);
             }
         });
@@ -193,6 +202,7 @@ class Store {
             this.currentRootNode = this.originalTree;
             this.tree = this.originalTree;
             this.treeMapRenderer.clear(); // キャッシュをクリア
+            this.startSearch_(this.searchQuery);
             this.trigger(CHANGE.ROOT_NODE_CHANGED);
         });
 
@@ -201,46 +211,46 @@ class Store {
                 this.currentRootNode = this.currentRootNode.parent;
                 this.tree = this.currentRootNode;
                 this.treeMapRenderer.clear(); // キャッシュをクリア
+                this.startSearch_(this.searchQuery);
                 this.trigger(CHANGE.ROOT_NODE_CHANGED);
             }
         });
 
         this.on(ACTION.SEARCH_NODES, (query: string) => {
-            this.searchQuery = query;
-            this.searchResults = this.searchNodesByName(query);
-            this.trigger(CHANGE.SEARCH_RESULTS_CHANGED);
+            this.startSearch_(query);
         });
 
         this.on(ACTION.CLEAR_SEARCH, () => {
-            this.searchQuery = "";
-            this.searchResults = [];
-            this.trigger(CHANGE.SEARCH_RESULTS_CHANGED);
+            this.startSearch_("");
         });
     }
 
-    // ノード名で検索する関数
-    searchNodesByName(query: string): DataNode[] {
-        if (!this.tree || !query.trim()) {
-            return [];
-        }
+    private startSearch_(query: string) {
+        this.searchController_?.abort();
+        const controller = new AbortController();
+        this.searchController_ = controller;
+        this.searchQuery = query;
+        this.searchResults = new SearchResults();
+        this.searchError = null;
+        const tree = this.tree;
+        this.searching = tree !== null && query.trim() !== "";
+        this.trigger(CHANGE.SEARCH_RESULTS_CHANGED);
+        if (!tree || !this.searching) return;
 
-        const results: DataNode[] = [];
-        const searchTerm = query.toLowerCase();
-
-        const searchRecursive = (node: DataNode) => {
-            if (node.key.toLowerCase().includes(searchTerm)) {
-                results.push(node);
-            }
-
-            if (node.children) {
-                for (const childKey in node.children) {
-                    searchRecursive(node.children[childKey]);
-                }
-            }
-        };
-
-        searchRecursive(this.tree);
-        return results;
+        searchTree(tree, query, controller.signal).then(results => {
+            if (!results || this.searchController_ !== controller) return;
+            this.searchResults = results;
+            this.searching = false;
+            this.searchController_ = null;
+            this.trigger(CHANGE.SEARCH_RESULTS_CHANGED);
+        }).catch(error => {
+            if (this.searchController_ !== controller) return;
+            console.error("Search failed:", error);
+            this.searching = false;
+            this.searchError = "Search failed";
+            this.searchController_ = null;
+            this.trigger(CHANGE.SEARCH_RESULTS_CHANGED);
+        });
     }
 
     on(event: CHANGE|ACTION, handler: (...args: any[]) => void): void {

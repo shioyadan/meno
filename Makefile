@@ -2,6 +2,12 @@ all:
 	mkdir -p dist
 	npx webpack
 
+typecheck:
+	./node_modules/.bin/tsc --noEmit
+
+test:
+	node test/search.test.cjs
+
 production:
 	mkdir -p dist
 	npx webpack --mode production
@@ -40,3 +46,5 @@ build-demo: production
 	cd demo; unzstd *.zst
 	./dist/embed.sh demo/dc-rsd-area.log
 	./dist/embed.sh demo/vivado-rsd-area.log
+
+.PHONY: all typecheck test production serve init clean

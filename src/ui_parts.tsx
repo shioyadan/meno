@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import Store, { ACTION, CHANGE } from "./store";
 import { DataNode } from "./loader";
-import { calcDedupedTotalSize } from "./driver/driver";
 
 import { fileOpen } from "browser-fs-access";
 
@@ -206,6 +205,7 @@ const ToolBar = (props: {store: Store;}) => {
                         className={`search-input ${theme === "dark" ? "dark" : "light"}`}
                         ref={searchInputRef}
                         placeholder="Search nodes"
+                        aria-label="Search nodes"
                         value={searchQuery}
                         onChange={handleSearchInputChange}
                     />
@@ -214,6 +214,7 @@ const ToolBar = (props: {store: Store;}) => {
                             variant="outline-secondary" 
                             size="sm"
                             onClick={handleSearchClear}
+                            aria-label="Clear search"
                             className={`search-clear ${theme === "dark" ? "is-dark" : "is-light"}`}
                         >
                             <BsX />
@@ -249,6 +250,8 @@ const StatusBar = (props: {store: Store;}) => {
     const [theme, setTheme] = useState(store.uiTheme); // 現在のテーマを管理
     const [searchTotalSize, setSearchTotalSize] = useState(0);
     const [rootSize, setRootSize] = useState(0);
+    const [searching, setSearching] = useState(false);
+    const [searchError, setSearchError] = useState<string|null>(null);
 
 
     useEffect(() => { // マウント時
@@ -271,13 +274,15 @@ const StatusBar = (props: {store: Store;}) => {
             setSearchQuery("");
             setSearchTotalSize(0);
             setRootSize(0);
+            setSearching(false);
+            setSearchError(null);
         });
         store.on(CHANGE.SEARCH_RESULTS_CHANGED, () => {
-            setSearchResultsCount(store.searchResults.length);
+            setSearchResultsCount(store.searchResults.count);
             setSearchQuery(store.searchQuery);
-            // 親子重複を除外した合計（素の値のまま）
-            const total = calcDedupedTotalSize(store.searchResults || [], 0);
-            setSearchTotalSize(total);
+            setSearchTotalSize(store.searchResults.totalSize);
+            setSearching(store.searching);
+            setSearchError(store.searchError);
         });
         setRootSize((store.currentRootNode && store.currentRootNode.data[0]) ? store.currentRootNode.data[0] : 0);
     }, []);
@@ -290,6 +295,8 @@ const StatusBar = (props: {store: Store;}) => {
 
     const getSearchMessage = () => {
         if (!searchQuery) return "";
+        if (searching) return ` | Searching for "${searchQuery}"...`;
+        if (searchError) return ` | ${searchError}`;
         if (searchResultsCount === 0) return ` | Search: "${searchQuery}" - No results found`;
         return ` | Search: "${searchQuery}" - ${searchResultsCount} result${searchResultsCount > 1 ? 's' : ''} found (Total: ${searchTotalSize}, ${toPercent(searchTotalSize, rootSize)} of root)`;
     };

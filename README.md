@@ -43,6 +43,9 @@ make production
 # Build debug version
 make
 
+# Check TypeScript types and run search regression tests
+make typecheck test
+
 # Launch the development server
 make serve
 

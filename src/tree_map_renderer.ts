@@ -1,5 +1,6 @@
 import TreeMap, { AreaEntry, Rect, Point } from "./tree_map";
 import {DataNode} from "./loader";
+import {SearchResults} from "./search";
 
 type FileNodeToStrFunction = (fileNode: DataNode, dataIndex: number) => string;
 type ThemeName = "dark" | "light";
@@ -61,7 +62,7 @@ class TreeMapRenderer {
     // そこの上の viewPort を描画する．
     render(canvas: HTMLCanvasElement, tree: DataNode|null, pointedFileNode: DataNode|null,
         virtualWidth: number, virtualHeight: number, viewPort: Rect, dataIndex: number,
-        fileNodeToStr: FileNodeToStrFunction, themeName: string, searchResults: DataNode[] = []
+        fileNodeToStr: FileNodeToStrFunction, themeName: string, searchResults = new SearchResults()
     ) {
         let self = this;
         // let theme = this.THEME["light"];
@@ -146,80 +147,41 @@ class TreeMapRenderer {
             }
         }        
         
-        // 検索結果のノードをハイライト
-        c.lineWidth = 4; 
-        const searchSet = new Set<DataNode>(searchResults);
-        c.strokeStyle = "#FFD700"; // ゴールド色でハイライト
-        for (let a of areas) {
-            if (a.fileNode && searchSet.has(a.fileNode)) {
-                searchSet.delete(a.fileNode); // 重複描画防止のため削除
-                let rect = a.rect;
+        // 全ヒットを毎フレーム走査せず、描画対象の一致と子孫の集計だけを参照する。
+        const hiddenMatches = new Map<number, number>();
+        for (const area of areas) {
+            if (area.fileNode) {
+                hiddenMatches.set(area.fileNode.id,
+                    searchResults.descendantCounts.get(area.fileNode.id) ?? 0);
+            }
+        }
+        c.lineWidth = 4;
+        c.strokeStyle = "#FFD700";
+        for (const area of areas) {
+            const node = area.fileNode;
+            if (!node) continue;
+            const matched = searchResults.matches(node);
+            const parent = node.parent;
+            if (parent && hiddenMatches.has(parent.id)) {
+                const count = (searchResults.descendantCounts.get(node.id) ?? 0) + (matched ? 1 : 0);
+                hiddenMatches.set(parent.id, hiddenMatches.get(parent.id)! - count);
+            }
+            if (matched) {
+                const rect = area.rect;
                 c.strokeRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
-                
-                // 検索結果のノードには半透明のオーバーレイを追加
-                c.fillStyle = "rgba(255, 215, 0, 0.3)"; // 半透明のゴールド
+                c.fillStyle = "rgba(255, 215, 0, 0.3)";
                 c.fillRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
             }
         }
 
-        // 子ノードに検索結果が含まれている場合もハイライト
-        // 検索にヒットしたノードが描画範囲にある場合でかつ，小さすぎて描画が省略されている場合，
-        // その祖先ノードもハイライトする
-        const collectHighlightAreas = (areas: AreaEntry[], searchSet: Set<DataNode>): AreaEntry[] => {
-
-            // areas の id(a.fileNode.id) -> area のマップを用意
-            const areaById = new Map<number, AreaEntry>();
-            for (const a of areas) {
-                if (a.fileNode && a.fileNode.id != -1) {
-                    areaById.set(a.fileNode.id, a);
-                }
-            }
-
-            // ノード s の祖先を親方向にたどり，最初に見つかった描画対象エリアを返す
-            const getHighlightArea = (s: DataNode): AreaEntry | null => {
-                if (!self.treeMap_.isDataNodeInView(s, virtualWidth, virtualHeight, viewPort)) {
-                    return null; // ビューポート外なら無視
-                }
-                let p = s.parent;
-                while (p) {
-                    const pid = p.id;
-                    if (pid === -1) break; // ルート想定（または終端）
-                    const hitArea = areaById.get(pid);
-                    if (hitArea) return hitArea; // 最初に見つかった祖先エリア
-                    p = p.parent;
-                }
-                return null;
-            };
-
-            // ハイライト対象エリアを重複なく収集
-            // すでに描画した親ノードの重複描画を避ける
-            const painted = new Set<number>();
-            const list: AreaEntry[] = [];
-            for (let s of searchSet) {
-                const hitArea = getHighlightArea(s);
-                if (!hitArea) continue;
-
-                const pid = hitArea.fileNode?.id;
-                if (pid == null || pid === -1) continue;
-
-                if (!painted.has(pid)) {  // 祖先のヒット確認をやった後じゃないと同一階層の別のものが無視される
-                    list.push(hitArea);
-                    painted.add(pid);
-                }
-            }
-            return list;
-        };
-
-        // 収集したエリアを描画
+        // 直接描画されない子孫のヒットを、最も近い表示中の祖先で知らせる。
         c.lineWidth = 3;
-        c.strokeStyle = "#FFA500"; // 直接一致より少しオレンジ寄り
-        const highlightAreas = collectHighlightAreas(areas, searchSet);
-        for (const a of highlightAreas) {
-            const rect = a.rect;
+        c.strokeStyle = "#FFA500";
+        c.fillStyle = "rgba(255, 165, 0, 0.20)";
+        for (const area of areas) {
+            if (!area.fileNode || (hiddenMatches.get(area.fileNode.id) ?? 0) <= 0) continue;
+            const rect = area.rect;
             c.strokeRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
-
-            // 子に検索結果がいることを示すため，やや弱めのオーバーレイ
-            c.fillStyle = "rgba(255, 165, 0, 0.20)"; // 半透明のオレンジ
             c.fillRect(rect[0], rect[1], rect[2] - rect[0], rect[3] - rect[1]);
         }
 

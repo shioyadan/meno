@@ -27,5 +27,4 @@ jobs:
 
     # ビルド
     - name: Run tests using Makefile
-      run: make production
-
+      run: make typecheck test production
