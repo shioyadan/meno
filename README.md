@@ -70,7 +70,7 @@ make production
 # Build debug version
 make
 
-# Check TypeScript types, launcher behavior, input streaming, and search regressions
+# Check types, launcher behavior, input streaming, search, and synthesis reports
 make typecheck test
 
 # Run the launcher from a source checkout after make production
@@ -91,6 +91,26 @@ make docker-run
 # Alternatively, after setting up the Docker environment, you can launch 'make' or other commands directly.
 ./docker/run.sh make
 ```
+
+### Synthesis Test Data
+
+The repository includes an independent small RTL design and scripts for Genus,
+Design Compiler, and Yosys. Configure the tools and licenses locally, put the
+executables on PATH, and supply library files through environment variables:
+
+```sh
+export MENO_LIBERTY_FILES='/path/to/logic.lib:/path/to/registers.lib'
+make synth-genus synth-yosys
+
+export MENO_DB_FILES='/path/to/logic.db:/path/to/registers.db'
+make synth-dc
+```
+
+Results go to a new directory under `work/synthesis/` for each run. Normal tests
+use hand-authored mock reports and JSON and do not require synthesis tools.
+Generated outputs remain local. See
+[generation instructions](test/synthesis/README.md) and
+[fixture design](test/fixtures/synthesis/README.md).
 
 ## License
 

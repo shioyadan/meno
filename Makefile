@@ -7,7 +7,7 @@ all:
 typecheck:
 	./node_modules/.bin/tsc --noEmit
 
-test: launcher-check
+test: launcher-check synthesis-check
 	node test/search.test.cjs
 	node test/file_reader.test.cjs
 
@@ -65,4 +65,10 @@ build-demo: production
 	./meno.sh --embed demo/dc-rsd-area.log
 	./meno.sh --embed demo/vivado-rsd-area.log
 
-.PHONY: all typecheck test production serve init clean pack latest-archive launcher-check build-demo
+synthesis-check:
+	python3 test/synthesis_runner_test.py
+
+synth-genus synth-dc synth-yosys:
+	python3 test/synthesis/run.py $(patsubst synth-%,%,$@)
+
+.PHONY: synthesis-check synth-genus synth-dc synth-yosys all typecheck test production serve init clean pack latest-archive launcher-check build-demo
