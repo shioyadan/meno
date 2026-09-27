@@ -19,7 +19,7 @@ Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC, a
 ### Use in Your Local Environment
 * Download and extract the pre-built files from [this link](https://github.com/shioyadan/meno/releases).
 * Drag and drop an input file onto `index.html` to visualize it.
-* To embed your input file into a standalone HTML, use `embed.sh`:
+* To embed your input file into a standalone HTML, use `embed.sh` (or `meno.sh --embed` in launcher distributions):
     ```bash
     # Generate an HTML file (your_area_report.txt.html) in the same directory.
     ./embed.sh your_area_report.txt
@@ -41,11 +41,17 @@ Download and extract [meno-latest.zip](https://shioyadan.github.io/meno/meno-lat
 ./meno.sh
 MENO_PORT=30080 ./meno.sh path/to/report.txt
 
+# Generate a standalone HTML file with an uncompressed UTF-8 report embedded.
+./meno.sh --embed path/to/report.txt          # Creates path/to/report.txt.html
+./meno.sh --embed path/to/report.txt out.html # Choose the output path
+
 # Check and install the latest development build after confirmation.
 ./meno.sh --update
 ```
 
 The server listens on `127.0.0.1` and serves only Meno and the specified input file. Files are streamed into the browser, including `.zst` / `.zstd` input. For a remote machine, run the printed `ssh -L ... <host>` command on your local machine and open the printed URL locally. Stop the server with Ctrl+C.
+
+With `--embed`, the generated HTML can be opened directly in a browser without a server or the original report. Existing output files are replaced after successful generation. The input file and Meno's `index.html` cannot be used as the output path. In a source checkout, run `make production` first.
 
 Updates show the installed and available commit and date, list changed files, and ask before replacing `meno.sh` and `index.html`. The update channel follows tested `main` builds, including changes newer than tagged releases. `MENO_UPDATE_URL` can select another compatible archive. Self-update is available in extracted distributions; for a source checkout, update with Git and rebuild with `make production`.
 

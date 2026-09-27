@@ -22,9 +22,9 @@ const App = () => {
     };
 
     useEffect(() => { // マウント時
-        // もし埋め込みのデフォルトデータが存在する場合はそれを読み込む
+        // placeholderだけの場合を除外し、同じ文字列を名前に含む入力も読み込む。
         const data = (window as any).MENO_INITIAL_LOADING_DATA;
-        if (data && data != "" && !data.includes("__MENO_INITIAL_LOADING_DATA_PLACE_HOLDER__")) {
+        if (data && !/^\s*__MENO_INITIAL_LOADING_DATA_PLACE_HOLDER__\s*$/.test(data)) {
             storeRef.current.trigger(ACTION.FILE_IMPORT, data);
         } else {
             // launcherは固定の/inputだけを配信し、圧縮判定用の名前をfragmentで渡す。

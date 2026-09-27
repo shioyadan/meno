@@ -1,5 +1,6 @@
-input_file="$(dirname "$0")/index.html"
-output_file="${1}.html"
+#!/usr/bin/env bash
+set -eu
 
-sed -e '/^__MENO_INITIAL_LOADING_DATA_PLACE_HOLDER__/{r '"$1"'' -e 'd}' "$input_file" > "$output_file"
-
+# 従来の入口を残し、埋め込み処理は自己更新されるlauncherへ統一する。
+script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+exec "$script_dir/meno.sh" --embed "$@"

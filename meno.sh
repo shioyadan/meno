@@ -11,6 +11,7 @@ build=0-source-unknown
 usage() {
     echo "Usage:" >&2
     echo "  $0 [FILE]" >&2
+    echo "  $0 --embed FILE [OUTPUT.html]" >&2
     echo "  $0 --update" >&2
     exit "${1:-2}"
 }
@@ -96,12 +97,17 @@ if [ "$#" -eq 1 ] && [ "$1" = "--update" ]; then
     exit 0
 fi
 
-if [ "${1:-}" = "--" ]; then
+embed=0
+if [ "${1:-}" = "--embed" ]; then
+    embed=1
+    shift
+    if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then usage; fi
+elif [ "${1:-}" = "--" ]; then
     shift
 elif [[ "${1:-}" = -* ]]; then
     usage
 fi
-if [ "$#" -gt 1 ]; then usage; fi
+if [ "$embed" -eq 0 ] && [ "$#" -gt 1 ]; then usage; fi
 
 # 配布版とsource treeで同じlauncherを使う。
 if [ -f "$script_dir/index.html" ]; then
@@ -111,6 +117,54 @@ elif [ -f "$script_dir/dist/index.html" ]; then
 else
     echo "index.html was not found. Extract Meno or run make production first." >&2
     exit 1
+fi
+
+if [ "$embed" -eq 1 ]; then
+    exec python3 - "$index_file" "$@" <<'PY'
+import json
+import os
+from pathlib import Path
+import sys
+import tempfile
+
+index = Path(sys.argv[1]).resolve()
+source = Path(sys.argv[2]).resolve()
+output = Path(sys.argv[3] if len(sys.argv) == 4 else sys.argv[2] + ".html").resolve()
+temporary = None
+try:
+    if output in (source, index) or (output.exists() and any(output.samefile(path) for path in (source, index))):
+        sys.exit("Output must differ from the input file and Meno's index.html.")
+    template = index.read_text(encoding="utf-8")
+    marker = "`\n__MENO_INITIAL_LOADING_DATA_PLACE_HOLDER__\n`"
+    if template.count(marker) != 1:
+        sys.exit("The Meno HTML does not contain an embedding placeholder. Run make production or extract a fresh distribution.")
+    before, after = template.split(marker)
+    # 入力は小分けにJSON文字列へ変換し、全体の複製をメモリ上へ保持しない。
+    # 途中の読み込み失敗でも既存の出力を壊さないよう、同じdirectoryで生成後に置換する。
+    with source.open(encoding="utf-8", newline="") as data:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline="", dir=output.parent,
+                                         prefix=".meno-embed-", suffix=".html", delete=False) as result:
+            temporary = Path(result.name)
+            result.write(before + '"')
+            while chunk := data.read(1024 * 1024):
+                # HTML parserによるscript終端と、JavaScriptの文字列解釈をともに避ける。
+                encoded = json.dumps(chunk, ensure_ascii=False)[1:-1]
+                result.write(encoded.replace("<", "\\u003c").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029"))
+            result.write('"' + after)
+        # 通常のファイル生成と同じumaskを使い、既存出力の権限は維持する。
+        mask = os.umask(0o077)
+        os.umask(mask)
+        mode = output.stat().st_mode & 0o777 if output.exists() else 0o666 & ~mask
+        os.chmod(temporary, mode)
+        os.replace(temporary, output)
+        temporary = None
+    print(f"Created: {output}")
+except (OSError, UnicodeError) as error:
+    sys.exit(f"Could not embed input: {error}")
+finally:
+    if temporary is not None:
+        temporary.unlink(missing_ok=True)
+PY
 fi
 
 # port 0でbindしたserverから実際のportを取得し、空きport探索との競合を避ける。

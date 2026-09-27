@@ -62,7 +62,7 @@ embed:
 
 build-demo: production
 	cd demo; unzstd *.zst
-	./dist/embed.sh demo/dc-rsd-area.log
-	./dist/embed.sh demo/vivado-rsd-area.log
+	./meno.sh --embed demo/dc-rsd-area.log
+	./meno.sh --embed demo/vivado-rsd-area.log
 
 .PHONY: all typecheck test production serve init clean pack latest-archive launcher-check build-demo

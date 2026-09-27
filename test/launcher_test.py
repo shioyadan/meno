@@ -1,5 +1,7 @@
 import contextlib
 import http.client
+from html.parser import HTMLParser
+import json
 import os
 from pathlib import Path
 import selectors
@@ -12,6 +14,28 @@ import zipfile
 
 REPO = Path(__file__).resolve().parent.parent
 LAUNCHER = (REPO / "meno.sh").read_text()
+TEMPLATE = (REPO / "src/index.html").read_text()
+
+
+class Scripts(HTMLParser):
+    def __init__(self, html):
+        super().__init__()
+        self.scripts = []
+        self.in_script = False
+        self.feed(html)
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "script":
+            self.in_script = True
+            self.scripts.append("")
+
+    def handle_endtag(self, tag):
+        if tag == "script":
+            self.in_script = False
+
+    def handle_data(self, data):
+        if self.in_script:
+            self.scripts[-1] += data
 
 
 class LauncherTest(unittest.TestCase):
@@ -27,9 +51,9 @@ class LauncherTest(unittest.TestCase):
         (self.install / "index.html").write_text("<!doctype html><title>old</title>")
         self.env = {key: value for key, value in os.environ.items() if not key.startswith("MENO_")}
 
-    def run_script(self, *args, answer="", script=None, **env):
+    def run_script(self, *args, answer="", script=None, umask=-1, **env):
         return subprocess.run([str(script or self.script), *args], input=answer, text=True,
-                              capture_output=True, timeout=10, cwd=self.root, env={**self.env, **env})
+                              capture_output=True, timeout=10, cwd=self.root, umask=umask, env={**self.env, **env})
 
     def archive(self, build="200-bbbbbbb-2026-02-02", invalid=False):
         archive = self.root / "update file.zip"
@@ -99,6 +123,112 @@ class LauncherTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(link.is_symlink())
         self.assertIn("build=200-bbbbbbb", self.script.read_text())
+
+    def assert_embedded(self, output, expected):
+        scripts = Scripts(output.read_text(encoding="utf-8")).scripts
+        self.assertEqual(len(scripts), 1)
+        assignment = scripts[0].strip()
+        self.assertTrue(assignment.startswith("window.MENO_INITIAL_LOADING_DATA="))
+        self.assertEqual(json.loads(assignment.split("=", 1)[1].removesuffix(";")), expected)
+
+    def test_embed_preserves_text_and_cannot_inject_script(self):
+        (self.install / "index.html").write_text(TEMPLATE)
+        source = self.root / "資料 ' #&+.txt"
+        content = 'quotes: " \' ` ${globalThis.injected = true} \\n\r\n資料😀\u2028\u2029\n'
+        content += '</ScRiPt><script>globalThis.injected = true</script>\n<!--\n'
+        content += '__MENO_INITIAL_LOADING_DATA_PLACE_HOLDER__\nlast line'
+        source.write_bytes(content.encode("utf-8"))
+        result = self.run_script("--embed", str(source))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        output = Path(str(source) + ".html")
+        self.assertIn(str(output), result.stdout)
+        self.assert_embedded(output, content)
+        self.assertEqual(source.read_bytes(), content.encode("utf-8"))
+        self.assertEqual((self.install / "index.html").read_text(), TEMPLATE)
+
+    def test_embed_output_override_and_large_input(self):
+        (self.install / "index.html").write_text(TEMPLATE)
+        source = self.root / "report.txt"
+        content = 'a' * (1024 * 1024 - 1) + '😀<script>`\\${x}\r\n' + 'z' * (1024 * 1024)
+        source.write_text(content, encoding="utf-8", newline="")
+        output = self.root / "output file.html"
+        output.write_text("old output")
+        result = self.run_script("--embed", str(source), str(output))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assert_embedded(output, content)
+
+    def test_embed_source_build_and_legacy_entry(self):
+        (self.install / "index.html").unlink()
+        dist = self.install / "dist"
+        dist.mkdir()
+        (dist / "index.html").write_text(TEMPLATE)
+        source = self.root / "input.txt"
+        source.write_text("report\n")
+        result = self.run_script("--embed", str(source))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assert_embedded(Path(str(source) + ".html"), "report\n")
+        (dist / "meno.sh").write_text(LAUNCHER)
+        (dist / "meno.sh").chmod(0o755)
+        legacy = dist / "embed.sh"
+        legacy.write_text((REPO / "src/embed.sh").read_text())
+        legacy.chmod(0o755)
+        output = self.root / "legacy.html"
+        result = self.run_script(str(source), str(output), script=legacy)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assert_embedded(output, "report\n")
+
+    def test_embed_respects_umask_and_preserves_existing_permissions(self):
+        (self.install / "index.html").write_text(TEMPLATE)
+        source = self.root / "input.txt"
+        source.write_text("report")
+        output = Path(str(source) + ".html")
+        result = self.run_script("--embed", str(source), umask=0o027)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output.stat().st_mode & 0o777, 0o640)
+        output.chmod(0o600)
+        result = self.run_script("--embed", str(source), umask=0o022)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output.stat().st_mode & 0o777, 0o600)
+
+    def test_embed_failure_preserves_existing_output(self):
+        (self.install / "index.html").write_text(TEMPLATE)
+        output = self.root / "output.html"
+        output.write_text("keep this output")
+        invalid = self.root / "invalid.txt"
+        invalid.write_bytes(b'a' * (2 * 1024 * 1024) + b'\xff')
+        for source in (self.root / "missing.txt", invalid, self.root):
+            result = self.run_script("--embed", str(source), str(output))
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Could not embed input", result.stderr)
+            self.assertEqual(output.read_text(), "keep this output")
+            self.assertEqual(list(self.root.glob(".meno-embed-*")), [])
+
+    def test_embed_rejects_input_and_template_as_output(self):
+        index = self.install / "index.html"
+        index.write_text(TEMPLATE)
+        source = self.root / "input.txt"
+        source.write_text("keep input")
+        alias = self.root / "input alias"
+        os.link(source, alias)
+        for output in (source, index, alias):
+            result = self.run_script("--embed", str(source), str(output))
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Output must differ", result.stderr)
+            self.assertEqual(source.read_text(), "keep input")
+            self.assertEqual(index.read_text(), TEMPLATE)
+
+    def test_embed_requires_template_and_valid_arguments(self):
+        source = self.root / "input.txt"
+        source.write_text("report")
+        output = Path(str(source) + ".html")
+        result = self.run_script("--embed", str(source))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("embedding placeholder", result.stderr)
+        self.assertFalse(output.exists())
+        for args in (("--embed",), ("--embed", "one", "two", "three")):
+            result = self.run_script(*args)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Usage:", result.stderr)
 
     @contextlib.contextmanager
     def server(self, *args, **env):
