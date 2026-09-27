@@ -2,7 +2,7 @@
 
 Meno is a tool for visualizing hierarchical data, such as directory tree sizes or synthesized circuit sizes. It can be built into a single, standalone HTML file.
 
-Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC, and hierarchical power reports from PrimeTime and Genus.
+Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC, hierarchical power reports from PrimeTime and Genus, and Yosys JSON netlists.
 
 ![demo](./demo/meno.gif)
 
@@ -104,13 +104,23 @@ make synth-genus synth-yosys
 
 export MENO_DB_FILES='/path/to/logic.db:/path/to/registers.db'
 make synth-dc
+
+# Generate and validate a Yosys netlist without an external cell library.
+env -u MENO_LIBERTY_FILES make check-yosys
 ```
 
 Results go to a new directory under `work/synthesis/` for each run. Normal tests
 use hand-authored mock reports and JSON and do not require synthesis tools.
-Generated outputs remain local. See
+Generated outputs remain local; CI also checks a fresh Yosys netlist. See
 [generation instructions](test/synthesis/README.md) and
 [fixture design](test/fixtures/synthesis/README.md).
+
+For Yosys, open the `design.json` produced by `write_json` in Meno. Meno shows
+instance hierarchy and cell counts; it also shows cell area when all used leaf
+cells have a library `area` attribute. `stat -json` is a statistics report and
+is not the supported input format. Genus area paths may be indented or full
+paths. Genus power reports preserve their reported units; select a single PDB
+frame before exporting, as multiple frames in one input are rejected.
 
 ## License
 

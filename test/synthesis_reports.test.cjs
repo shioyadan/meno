@@ -75,6 +75,27 @@ test('synthetic power preserves units and derives missing dynamic power', async 
     checkMetrics(root, 6);
 });
 
+test('synthetic Yosys netlists aggregate repeated modules and direct cells', async () => {
+    const mapped = await load(fixture('yosys/mapped.json'));
+    assert.equal(mapped.root.key, 'mock_netlist');
+    assert.deepEqual(mapped.root.data, [18.5, 11]);
+    assert.deepEqual(mapped.driver.itemNames(), ['cell-area', 'cell-count']);
+    for (const index of ['[2]', '[7]']) {
+        const unit = mapped.root.children.tiles.children[index].children['.unit'];
+        assert.deepEqual(unit.data, [8.5, 5]);
+        assert.deepEqual(unit.children.u_comb.data, [3, 3]);
+        assert.deepEqual(unit.children.others.data, [5.5, 2]);
+    }
+    assert.deepEqual(mapped.root.children.others.data, [1.5, 1]);
+    checkMetrics(mapped.root, 2);
+    const generic = await load(fixture('yosys/generic.json'));
+    assert.deepEqual(generic.root.data, [11]);
+    assert.deepEqual(generic.root.children.tiles.children['[2]'].children['.unit'].data, [5]);
+    assert.deepEqual(generic.root.children.others.data, [1]);
+    assert.deepEqual(generic.driver.itemNames(), ['cell-count']);
+    checkMetrics(generic.root, 1);
+});
+
 test('area headers control column order and accept exponent values and an omitted root module', async () => {
     const input = 'Synthetic area fixture\nInstance Module Total-Area Cell-Count Net-Area Cell-Area\n' +
         'root 1e1 3 1.0 9.0\nroot/leaf cell 7e0 2 1e0 6e0';
@@ -182,6 +203,15 @@ test('cancel from report progress prevents success and further notifications', a
     assert.equal(errors, 0);
 });
 
+test('Yosys rejects cycles, ambiguous roots, invalid area and incompatible JSON', async () => {
+    const netlist = modules => JSON.stringify({ creator: 'Yosys test', modules });
+    await assert.rejects(load(netlist({ a: { attributes: { top: 1 }, cells: { u: { type: 'a' } } } })), /Recursive/);
+    await assert.rejects(load(netlist({ a: { cells: {} }, b: { cells: {} } })), /one Yosys top/);
+    await assert.rejects(load(netlist({ a: { cells: { u: { type: 'g' } } }, g: { attributes: { blackbox: 1, area: '-1' } } })), /Invalid cell area/);
+    await assert.rejects(load(netlist({ a: { num_cells: 1 } })), /Expected write_json/);
+    await assert.rejects(load('{"creator":"Yosys test", "modules":'), /Invalid Yosys JSON/);
+});
+
 test('local area wrapped paths and headerless legacy input remain supported', async () => {
     const source = fixture('area_local.rpt');
     const report = source.replace(/(frontend\/\S+) +15\.0/, '$1\n    15.0');
@@ -206,3 +236,18 @@ test('Vivado and PrimeTime inputs still select their original drivers', async ()
     assert.equal(power.root.data[0], 6);
 });
 
+// 指定された新規生成物は、別コマンドstatの結果とも比較する。
+for (const [index, filename] of process.argv.slice(2).entries()) {
+    test(`fresh Yosys netlist agrees with independent statistics (${index + 1})`, async () => {
+        const { root, driver } = await load(fs.readFileSync(filename, 'utf8'));
+        const statistics = JSON.parse(fs.readFileSync(path.join(path.dirname(filename), 'stats.json'), 'utf8')).design;
+        assert.equal(root.key, 'sample_top');
+        const countIndex = driver.itemNames().indexOf('cell-count');
+        assert.equal(root.data[countIndex], statistics.num_cells);
+        const areaIndex = driver.itemNames().indexOf('cell-area');
+        if (areaIndex >= 0) close(root.data[areaIndex], statistics.area, 1e-6);
+        const lanes = root.children.lanes;
+        assert.deepEqual(Object.keys(lanes.children).sort(), ['[0]', '[1]']);
+        checkMetrics(root, driver.itemNames().length);
+    });
+}

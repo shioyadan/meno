@@ -94,9 +94,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('tool', choices=TOOLS)
     parser.add_argument('--output', type=Path, default=SOURCE.parents[1] / 'work' / 'synthesis')
+    parser.add_argument('--check', action='store_true', help='Check a fresh Yosys netlist with Meno and tool statistics.')
     args = parser.parse_args()
+    if args.check and args.tool != 'yosys':
+        parser.error('--check is only supported for Yosys.')
     try:
-        generate(args.tool, args.output.resolve())
+        run = generate(args.tool, args.output.resolve())
+        if args.check:
+            test = SOURCE.parent / 'synthesis_reports.test.cjs'
+            if subprocess.call(['node', str(test), str(run / 'design.json')]):
+                raise ValueError('Generated Yosys report failed validation.')
     except (OSError, ValueError) as error:
         sys.exit(str(error))
 

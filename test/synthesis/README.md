@@ -17,6 +17,9 @@ make synth-dc
 
 # Yosys can also generate generic-cell statistics without a library.
 env -u MENO_LIBERTY_FILES make synth-yosys
+
+# Also load the fresh JSON in Meno and compare with Yosys statistics.
+env -u MENO_LIBERTY_FILES make check-yosys
 ```
 
 `genus`, `dc_shell`, and `yosys` must be on PATH. Python 3 is required by the
@@ -44,8 +47,8 @@ Each run creates a new `work/synthesis/<tool>-<unique suffix>/` directory:
 | DC | `area.rpt`, `power.rpt`, timing, netlist |
 | Yosys | `stats.txt`, `stats.json`, `design.json`, netlist |
 
-These outputs provide independent inputs for parser regression tests. DC power
-is generated for inspection; Meno's existing PrimeTime parser is not a DC power
+Open Genus area/power, DC area, or Yosys `design.json` in Meno. DC power is
+generated for inspection; Meno's existing PrimeTime parser is not a DC power
 parser. Yosys `stat -json` is retained as an independent statistics check.
 
 `run.log` retains tool diagnostics. `manifest.json` records the tool version,
@@ -73,7 +76,8 @@ or copies that only substitute names or numbers. Add coverage using invented
 hierarchies and fixed values with hand-checkable totals. The source circuit
 here and the mock fixture hierarchies are intentionally independent.
 
-Real-tool checks remain explicit local runs and are not required by normal
-tests or CI.
+`make check-yosys` retains a real-tool integration check: it generates a fresh
+netlist and compares Meno's results with Yosys statistics. Commercial-tool
+checks remain explicit local runs and are not required by normal tests or CI.
 Each externally supplied library and commercial tool's terms apply to local
 runs and to any sharing of their outputs independently of Meno's license.

@@ -38,6 +38,7 @@ and cancellation cases. Expected values are specified independently of the
 parser's result.
 
 Real-tool compatibility checks are separate. The scripts under `test/synthesis/`
-write local outputs to `work/synthesis/`. Generated reports, manifests, library
+write local outputs to `work/synthesis/`; `make check-yosys` checks a fresh JSON
+netlist against Yosys statistics in CI. Generated reports, manifests, library
 files, and tool versions are not copied into these committed fixtures. Keep any
 real-tool output local and check the applicable terms before sharing it.

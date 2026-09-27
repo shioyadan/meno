@@ -1,3 +1,4 @@
+import YosysDriver from "./driver/yosys";
 import FileInfoDriver from "./driver/file_info";
 import DC_AreaDriver from "./driver/dc_area";
 import VivadoAreaDriver from "./driver/vivado_area";
@@ -5,7 +6,7 @@ import GenusAreaDriver from "./driver/genus_area";
 import PrimeTimePowerDriver from "./driver/prime_time_power";
 import GenusPowerTotalDriver from "./driver/genus_power";
 
-let driverList = [FileInfoDriver, DC_AreaDriver, VivadoAreaDriver, GenusAreaDriver, PrimeTimePowerDriver, GenusPowerTotalDriver];
+let driverList = [FileInfoDriver, DC_AreaDriver, YosysDriver, VivadoAreaDriver, GenusAreaDriver, PrimeTimePowerDriver, GenusPowerTotalDriver];
 
 
 import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver/driver";

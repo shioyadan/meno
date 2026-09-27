@@ -69,7 +69,10 @@ synthesis-check:
 	python3 test/synthesis_runner_test.py
 	node test/synthesis_reports.test.cjs
 
+check-yosys:
+	python3 test/synthesis/run.py yosys --check
+
 synth-genus synth-dc synth-yosys:
 	python3 test/synthesis/run.py $(patsubst synth-%,%,$@)
 
-.PHONY: synthesis-check synth-genus synth-dc synth-yosys all typecheck test production serve init clean pack latest-archive launcher-check build-demo
+.PHONY: synthesis-check check-yosys synth-genus synth-dc synth-yosys all typecheck test production serve init clean pack latest-archive launcher-check build-demo
