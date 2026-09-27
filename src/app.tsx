@@ -17,6 +17,10 @@ const App = () => {
     });
     const divRef = useRef<HTMLDivElement>(null);
 
+    const hideContextMenu = () => {
+        setContextMenu(prev => ({ ...prev, show: false, targetNode: null }));
+    };
+
     useEffect(() => { // マウント時
         // もし埋め込みのデフォルトデータが存在する場合はそれを読み込む
         const data = (window as any).MENO_INITIAL_LOADING_DATA;
@@ -25,18 +29,11 @@ const App = () => {
         }
 
         // コンテキストメニューを閉じるためのクリックリスナー
-        const handleClickOutside = () => {
-            setContextMenu(prev => ({ ...prev, show: false, targetNode: null }));
-        };
-        const handleTreeReleased = () => {
-            setContextMenu(prev => ({ ...prev, show: false, targetNode: null }));
-        };
-
-        document.addEventListener('click', handleClickOutside);
-        storeRef.current.on(CHANGE.TREE_RELEASED, handleTreeReleased);
+        document.addEventListener('click', hideContextMenu);
+        storeRef.current.on(CHANGE.TREE_RELEASED, hideContextMenu);
         return () => {
-            document.removeEventListener('click', handleClickOutside);
-            storeRef.current.off(CHANGE.TREE_RELEASED, handleTreeReleased);
+            document.removeEventListener('click', hideContextMenu);
+            storeRef.current.off(CHANGE.TREE_RELEASED, hideContextMenu);
         };
     }, []);
 
@@ -47,10 +44,6 @@ const App = () => {
             y,
             targetNode
         });
-    };
-
-    const hideContextMenu = () => {
-        setContextMenu(prev => ({ ...prev, show: false, targetNode: null }));
     };
 
     const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {

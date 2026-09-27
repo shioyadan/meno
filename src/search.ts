@@ -7,13 +7,8 @@ class SearchResults {
     count = 0;
     totalSize = 0;
     descendantCounts = new Map<number, number>();
-    readonly term: string;
     // 未走査の同名ノードを光らせず、巨大なヒット配列も作らないようIDをビットで記録する。
     private readonly matchedPages_ = new Map<number, Uint32Array>();
-
-    constructor(query = "") {
-        this.term = query.trim() ? query.toLowerCase() : "";
-    }
 
     matches(node: DataNode): boolean {
         const page = this.matchedPages_.get(Math.floor(node.id / MATCH_PAGE_SIZE));
@@ -44,8 +39,9 @@ function searchTree(root: DataNode, query: string, signal: AbortSignal,
     onProgress?: SearchProgressCallback,
     onPartialResults?: (results: SearchResults) => void): Promise<SearchResults|null> {
     if (signal.aborted) return Promise.resolve(null);
-    const results = new SearchResults(query);
-    if (!results.term) return Promise.resolve(results);
+    const results = new SearchResults();
+    if (!query.trim()) return Promise.resolve(results);
+    const term = query.toLowerCase();
 
     return new Promise((resolve, reject) => {
         let visits = root.walkForSearch();
@@ -105,7 +101,7 @@ function searchTree(root: DataNode, query: string, signal: AbortSignal,
                     const visit = next.value;
                     if (visit.entering) {
                         processed++;
-                        const matched = visit.key.toLowerCase().includes(results.term);
+                        const matched = visit.key.toLowerCase().includes(term);
                         const covered = stack[stack.length - 1]?.covered ?? false;
                         if (matched) {
                             results.addMatch(visit.id);

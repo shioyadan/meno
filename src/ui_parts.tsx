@@ -243,7 +243,7 @@ const ToolBar = (props: {store: Store;}) => {
 };
 
 const StatusBar = (props: {store: Store;}) => {
-    let store = props.store;
+    const { store } = props;
     const [statusBarMessage, setStatusBarMessage] = useState("");
     const [searchResultsCount, setSearchResultsCount] = useState(0);
     const [searchQuery, setSearchQuery] = useState("");
@@ -255,21 +255,18 @@ const StatusBar = (props: {store: Store;}) => {
     const [searchError, setSearchError] = useState<string|null>(null);
 
 
-    useEffect(() => { // マウント時
-        store.on(CHANGE.CANVAS_POINTER_CHANGED, () => {
+    useEffect(() => {
+        const onPointer = () => {
             if (!store.pointedPath || !store.pointedFileNode) { return;}
             setStatusBarMessage(store.pointedPath + store.fileNodeToStr(store.pointedFileNode, store.dataIndex, true));
-        });
-        store.on(CHANGE.CHANGE_UI_THEME, () => {
+        };
+        const onTheme = () => {
             setTheme(store.uiTheme);
-        });
-        store.on(CHANGE.ROOT_NODE_CHANGED, () => {  // ルートノードサイズを更新
-            setRootSize((store.currentRootNode && store.currentRootNode.data[0]) ? store.currentRootNode.data[0] : 0);
-        });
-        store.on(CHANGE.TREE_LOADED, () => {
-            setRootSize((store.currentRootNode && store.currentRootNode.data[0]) ? store.currentRootNode.data[0] : 0);
-        });
-        store.on(CHANGE.TREE_RELEASED, () => {
+        };
+        const onRoot = () => {
+            setRootSize(store.currentRootNode?.data[0] ?? 0);
+        };
+        const onRelease = () => {
             setStatusBarMessage("");
             setSearchResultsCount(0);
             setSearchQuery("");
@@ -278,22 +275,34 @@ const StatusBar = (props: {store: Store;}) => {
             setSearching(false);
             setSearchProgress(0);
             setSearchError(null);
-        });
-        store.on(CHANGE.SEARCH_RESULTS_CHANGED, () => {
+        };
+        const onSearch = () => {
             setSearchResultsCount(store.searchResults.count);
             setSearchQuery(store.searchQuery);
             setSearchTotalSize(store.searchResults.totalSize);
             setSearching(store.searching);
             setSearchProgress(store.searchProgress);
             setSearchError(store.searchError);
-        });
-        setRootSize((store.currentRootNode && store.currentRootNode.data[0]) ? store.currentRootNode.data[0] : 0);
-    }, []);
-
-    useEffect(() => {
+        };
         const onProgress = () => setSearchProgress(store.searchProgress);
+
+        store.on(CHANGE.CANVAS_POINTER_CHANGED, onPointer);
+        store.on(CHANGE.CHANGE_UI_THEME, onTheme);
+        store.on(CHANGE.ROOT_NODE_CHANGED, onRoot);
+        store.on(CHANGE.TREE_LOADED, onRoot);
+        store.on(CHANGE.TREE_RELEASED, onRelease);
+        store.on(CHANGE.SEARCH_RESULTS_CHANGED, onSearch);
         store.on(CHANGE.SEARCH_PROGRESS, onProgress);
-        return () => store.off(CHANGE.SEARCH_PROGRESS, onProgress);
+        onRoot();
+        return () => {
+            store.off(CHANGE.CANVAS_POINTER_CHANGED, onPointer);
+            store.off(CHANGE.CHANGE_UI_THEME, onTheme);
+            store.off(CHANGE.ROOT_NODE_CHANGED, onRoot);
+            store.off(CHANGE.TREE_LOADED, onRoot);
+            store.off(CHANGE.TREE_RELEASED, onRelease);
+            store.off(CHANGE.SEARCH_RESULTS_CHANGED, onSearch);
+            store.off(CHANGE.SEARCH_PROGRESS, onProgress);
+        };
     }, [store]);
 
     const toPercent = (part: number, whole: number): string => {

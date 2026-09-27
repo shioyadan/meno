@@ -5,9 +5,7 @@ const NODE_PAGE_BITS = 18;
 const NODE_PAGE_SIZE = 1 << NODE_PAGE_BITS;
 const KEY_PAGE_BITS = 20;
 const KEY_PAGE_SIZE = 1 << KEY_PAGE_BITS;
-const DATA_SIZE = 0;
 const DATA_COUNT = 1;
-const DATA_IS_DIRECTORY = 2;
 const MAX_KEY_POOL_OFFSET = 0x7fffffff;
 const MAX_KEY_LENGTH = 0xffff;
 const MAX_KEY_INTERN_CHARS = 128;
@@ -30,13 +28,8 @@ type FileInfoPage = {
     keyLength: Uint16Array<ArrayBufferLike>;
 };
 
-type ChildrenMeta = {
-    proxy: Record<string, DataNode>;
-    keys: string[];
-    idByKey: Record<string, number>;
-};
-
-class CompactFileInfoNode {
+// 読み込み後のツリーは不変なので、UIには参照用のプロパティだけを公開する。
+class CompactFileInfoNode implements DataNode {
     constructor(private store_: CompactFileInfoStore, private nodeId_: number) {
     }
 
@@ -44,53 +37,28 @@ class CompactFileInfoNode {
         return this.store_.getChildren(this.nodeId_);
     }
 
-    set children(_value: Record<string, DataNode>|null) {
-    }
-
     get parent(): DataNode|null {
         return this.store_.getParent(this.nodeId_);
-    }
-
-    set parent(_value: DataNode|null) {
     }
 
     get key(): string {
         return this.store_.getKey(this.nodeId_);
     }
 
-    set key(value: string) {
-        this.store_.setKey(this.nodeId_, value);
-    }
-
     get fileCount(): number {
         return this.store_.getCount(this.nodeId_);
-    }
-
-    set fileCount(value: number) {
-        this.store_.setCount(this.nodeId_, value);
     }
 
     get isDirectory(): boolean {
         return this.store_.isDirectory(this.nodeId_);
     }
 
-    set isDirectory(value: boolean) {
-        this.store_.setDirectory(this.nodeId_, value);
-    }
-
     get id(): number {
         return this.nodeId_;
     }
 
-    set id(_value: number) {
-    }
-
     get data(): number[] {
         return this.store_.getData(this.nodeId_);
-    }
-
-    set data(value: number[]) {
-        this.store_.setData(this.nodeId_, value);
     }
 
     get hasChildren(): boolean {
@@ -106,10 +74,8 @@ class CompactFileInfoNode {
     }
 }
 
-// file_info dumps can contain millions of entries. Keeping every entry as a
-// DataNode object plus a children object is much larger than the raw data, so
-// this store keeps the tree in ArrayBuffer-backed typed arrays and exposes
-// DataNode-compatible wrappers only when the UI actually touches a node.
+// 数百万ノードをDataNodeとchildren辞書で保持しないよう、木を型付き配列へ保存する。
+// DataNode互換のwrapperはUIがアクセスしたノードだけに生成する。
 class CompactFileInfoStore {
     private maxId_ = 0;
     private rootId_ = NO_ID;
@@ -124,12 +90,7 @@ class CompactFileInfoStore {
 
     private nodeCache_ = new Map<number, DataNode>();
     private dataCache_ = new Map<number, number[]>();
-    private childrenCache_ = new Map<number, ChildrenMeta>();
-
-    constructor() {
-        this.ensurePage_(0);
-        this.setKeyBytes_(0, "");
-    }
+    private childrenCache_ = new Map<number, Record<string, DataNode>>();
 
     addNode(id: number, parentId: number, key: string, isDirectory: boolean, fileCount: number, size: number) {
         this.ensurePage_(Math.max(id, parentId));
@@ -159,7 +120,7 @@ class CompactFileInfoStore {
         for (let id = this.maxId_; id >= 1; id--) {
             const page = this.getPage_(id);
             const index = this.nodeIndex_(id);
-            if (!this.existsInPage_(id, page, index)) {
+            if (page.keyOffset[index] === NO_ID) {
                 continue;
             }
 
@@ -193,6 +154,8 @@ class CompactFileInfoStore {
             }
         }
         this.releaseLastChild_();
+        // 重複排除用の文字列索引は読み込み時だけ必要。ノードはバイト列への参照を保持する。
+        this.keyIntern_.clear();
         this.dataCache_.clear();
         this.nodeCount_ = count;
     }
@@ -214,9 +177,9 @@ class CompactFileInfoStore {
             return null;
         }
 
-        let meta = this.childrenCache_.get(id);
-        if (meta) {
-            return meta.proxy;
+        const cached = this.childrenCache_.get(id);
+        if (cached) {
+            return cached;
         }
 
         const keys: string[] = [];
@@ -227,9 +190,7 @@ class CompactFileInfoStore {
             idByKey[key] = childId;
         }
 
-        // Existing code expects "children" to behave like Record<string, DataNode>
-        // and uses Object.keys(), for-in, "in", and children[key]. A Proxy gives
-        // that surface without materializing child DataNode wrappers up front.
+        // 子のwrapperを先に生成せず、Object.keys・for-in・in・children[key]に対応する。
         const proxy = new Proxy(Object.create(null) as Record<string, DataNode>, {
             get: (_target, prop) => {
                 if (typeof prop !== "string") {
@@ -255,8 +216,7 @@ class CompactFileInfoStore {
             },
         });
 
-        meta = { proxy, keys, idByKey };
-        this.childrenCache_.set(id, meta);
+        this.childrenCache_.set(id, proxy);
         return proxy;
     }
 
@@ -293,34 +253,14 @@ class CompactFileInfoStore {
         return this.textDecoder_.decode(bytes);
     }
 
-    setKey(id: number, value: string) {
-        this.setKeyBytes_(id, value);
-        const parentId = this.getParentId_(id);
-        if (parentId >= 0) {
-            this.childrenCache_.delete(parentId);
-        }
-    }
-
     getCount(id: number): number {
         const page = this.getPage_(id);
         return page.count[this.nodeIndex_(id)];
     }
 
-    setCount(id: number, value: number) {
-        const page = this.getPage_(id);
-        page.count[this.nodeIndex_(id)] = value;
-        this.dataCache_.delete(id);
-    }
-
     isDirectory(id: number): boolean {
         const page = this.getPage_(id);
         return page.directory[this.nodeIndex_(id)] !== 0;
-    }
-
-    setDirectory(id: number, value: boolean) {
-        const page = this.getPage_(id);
-        page.directory[this.nodeIndex_(id)] = value ? 1 : 0;
-        this.dataCache_.delete(id);
     }
 
     getData(id: number): number[] {
@@ -332,15 +272,6 @@ class CompactFileInfoStore {
             this.dataCache_.set(id, data);
         }
         return data;
-    }
-
-    setData(id: number, value: number[]) {
-        const page = this.getPage_(id);
-        const index = this.nodeIndex_(id);
-        page.size[index] = value[DATA_SIZE] ?? 0;
-        page.count[index] = value[DATA_COUNT] ?? 0;
-        page.directory[index] = value[DATA_IS_DIRECTORY] ? 1 : 0;
-        this.dataCache_.set(id, [page.size[index], page.count[index], page.directory[index]]);
     }
 
     hasChildren(id: number): boolean {
@@ -378,7 +309,7 @@ class CompactFileInfoStore {
     private getNode_(id: number): DataNode {
         let node = this.nodeCache_.get(id);
         if (!node) {
-            node = new CompactFileInfoNode(this, id) as unknown as DataNode;
+            node = new CompactFileInfoNode(this, id);
             this.nodeCache_.set(id, node);
         }
         return node;
@@ -409,11 +340,7 @@ class CompactFileInfoStore {
         }
 
         const page = this.getPage_(id);
-        return this.existsInPage_(id, page, this.nodeIndex_(id));
-    }
-
-    private existsInPage_(id: number, page: FileInfoPage, index: number): boolean {
-        return id > 0 && id <= this.maxId_ && page.keyOffset[index] !== NO_ID;
+        return page.keyOffset[this.nodeIndex_(id)] !== NO_ID;
     }
 
     private getParentId_(id: number): number {
@@ -435,12 +362,11 @@ class CompactFileInfoStore {
         return this.pages_[this.pageIndex_(id)];
     }
 
-    private ensurePage_(id: number): FileInfoPage {
+    private ensurePage_(id: number): void {
         const pageIndex = this.pageIndex_(id);
         while (pageIndex >= this.pages_.length) {
             this.pages_.push(this.createPage_());
         }
-        return this.pages_[pageIndex];
     }
 
     private createPage_(): FileInfoPage {
@@ -464,8 +390,7 @@ class CompactFileInfoStore {
     }
 
     private releaseLastChild_() {
-        // lastChild is only needed while appending nodes. Dropping it after the
-        // final tree has nextSibling links saves one Int32Array per node page.
+        // lastChildは追加中だけ必要。nextSibling確定後は各ページの配列を解放する。
         for (const page of this.pages_) {
             page.lastChild = null;
         }
@@ -520,8 +445,7 @@ class CompactFileInfoStore {
     }
 
     private rememberKey_(value: string, ref: KeyRef) {
-        // Existing nodes keep valid byte-pool offsets after cache eviction.
-        // This Map is only a bounded dedup index for keys seen while loading.
+        // 索引を消しても既存ノードの参照は有効なので、読み込み中の索引サイズを制限できる。
         if (this.keyIntern_.size >= MAX_KEY_INTERN_ENTRIES) {
             this.keyIntern_.clear();
         }
@@ -532,8 +456,7 @@ class CompactFileInfoStore {
         let srcOffset = 0;
         let dstOffset = offset;
 
-        // Keys are stored in fixed-size byte pages so the pool can grow without
-        // copying hundreds of MB when loading very large file_info dumps.
+        // 巨大なバイト列を再確保・コピーせずに拡張できるよう、固定長のページへ保存する。
         while (srcOffset < bytes.length) {
             const pageIndex = Math.floor(dstOffset / KEY_PAGE_SIZE);
             const pageOffset = dstOffset % KEY_PAGE_SIZE;

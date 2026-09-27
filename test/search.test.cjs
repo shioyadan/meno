@@ -69,6 +69,24 @@ function paceTraversal(t, root) {
     return milliseconds => { now += milliseconds; };
 }
 
+function createHighlightRenderer(root, visible) {
+    const renderer = new Renderer();
+    renderer.treeMap_.createTreeMap = () => visible.map((fileNode, i) => ({
+        fileNode, key: fileNode.key, rect: [i * 100, 0, i * 100 + 90, 80], level: i ? 1 : 0, isLeaf: i > 0
+    }));
+    const outlines = [];
+    const context = {
+        fillRect() {}, fillText() {}, strokeText() {},
+        strokeRect(...rect) { outlines.push({ color: this.strokeStyle, rect }); }
+    };
+    const canvas = { width: 1000, height: 800, getContext: () => context };
+    return results => {
+        outlines.length = 0;
+        renderer.render(canvas, root, null, 1000, 800, [0, 0, 1000, 800], 0, () => '', 'dark', results);
+        return outlines;
+    };
+}
+
 test('search preserves case-insensitive matching and excludes overlapping ancestor totals', async () => {
     const root = fixture();
     const result = await search(root, 'mAtCh');
@@ -180,6 +198,7 @@ test('wide compact trees cross node pages and yield to other event-loop work', a
         assert.ok(ticks > 2, `Only ${ticks} event-loop ticks occurred`);
         assert.equal(root.store_.nodeCache_.size, 1);
         assert.equal(root.store_.childrenCache_.size, 0);
+        assert.equal(root.store_.keyIntern_.size, 0);
         assert.equal(root.searchNodeCount, 270001);
         assert.equal(progress[0], 0);
         assert.equal(progress.at(-1), 1);
@@ -439,15 +458,13 @@ test('changing the displayed root restarts the query within the new subtree', as
     assert.equal(store.searchResults.count, 3);
 });
 
-test('search errors leave the store responsive and a subsequent search can succeed', async () => {
+test('search errors leave the store responsive and a subsequent search can succeed', async t => {
     const root = fixture(); const original = root.walkForSearch;
     root.walkForSearch = function* () { throw new Error('Expected traversal failure'); };
-    const store = storeFor(root); const originalError = console.error;
-    try {
-        console.error = () => {};
-        store.trigger(ACTION.SEARCH_NODES, 'match'); await settled(store);
-        assert.equal(store.searchError, 'Search failed');
-    } finally { console.error = originalError; }
+    const store = storeFor(root);
+    t.mock.method(console, 'error', () => {});
+    store.trigger(ACTION.SEARCH_NODES, 'match'); await settled(store);
+    assert.equal(store.searchError, 'Search failed');
     root.walkForSearch = original;
     store.trigger(ACTION.SEARCH_NODES, 'match'); await settled(store);
     assert.equal(store.searchError, null);
@@ -456,23 +473,11 @@ test('search errors leave the store responsive and a subsequent search can succe
 
 test('renderer highlights direct and omitted descendant matches using visible areas only', async () => {
     const root = fixture(); const result = await search(root, 'match');
-    const renderer = new Renderer();
-    const areas = [root, root.children['MATCH-dir'], root.children['match-outside']].map((fileNode, i) => ({
-        fileNode, key: fileNode.key, rect: [i * 100, 0, i * 100 + 90, 80], level: i ? 1 : 0, isLeaf: i > 0
-    }));
-    renderer.treeMap_.createTreeMap = () => areas;
-    const outlines = [];
-    const context = {
-        fillRect() {}, fillText() {}, strokeText() {},
-        strokeRect(...rect) { outlines.push({ color: this.strokeStyle, rect }); }
-    };
-    const canvas = { width: 1000, height: 800, getContext: () => context };
-    renderer.render(canvas, root, null, 1000, 800, [0, 0, 1000, 800], 0, () => '', 'dark', result);
+    const render = createHighlightRenderer(root, [root, root.children['MATCH-dir'], root.children['match-outside']]);
+    const outlines = render(result);
     assert.equal(outlines.filter(x => x.color === '#FFD700').length, 2);
     assert.deepEqual(outlines.filter(x => x.color === '#FFA500').map(x => x.rect), [[100, 0, 90, 80]]);
-    outlines.length = 0;
-    renderer.render(canvas, root, null, 1000, 800, [0, 0, 1000, 800], 0, () => '', 'dark', new SearchResults());
-    assert.equal(outlines.filter(x => ['#FFD700', '#FFA500'].includes(x.color)).length, 0);
+    assert.equal(render(new SearchResults()).filter(x => ['#FFD700', '#FFA500'].includes(x.color)).length, 0);
 });
 
 test('renderer updates discovered direct and hidden matches before the search finishes', async t => {
@@ -484,22 +489,11 @@ test('renderer updates discovered direct and hidden matches before the search fi
         directory.children[padding.key] = padding;
     }
     paceTraversal(t, root);
-    const renderer = new Renderer();
-    const visible = [root, directory, root.children['match-outside']];
-    renderer.treeMap_.createTreeMap = () => visible.map((fileNode, i) => ({
-        fileNode, key: fileNode.key, rect: [i * 100, 0, i * 100 + 90, 80], level: i ? 1 : 0, isLeaf: i > 0
-    }));
-    const outlines = [];
-    const context = {
-        fillRect() {}, fillText() {}, strokeText() {},
-        strokeRect(...rect) { outlines.push({ color: this.strokeStyle, rect }); }
-    };
-    const canvas = { width: 1000, height: 800, getContext: () => context };
+    const render = createHighlightRenderer(root, [root, directory, root.children['match-outside']]);
     let sawHidden = false;
     await searchTree(root, 'match', new AbortController().signal, () => {}, partial => {
         if (partial.count > 2) return;
-        outlines.length = 0;
-        renderer.render(canvas, root, null, 1000, 800, [0, 0, 1000, 800], 0, () => '', 'dark', partial);
+        const outlines = render(partial);
         assert.deepEqual(outlines.filter(x => x.color === '#FFD700').map(x => x.rect), [[100, 0, 90, 80]]);
         const orange = outlines.filter(x => x.color === '#FFA500').map(x => x.rect);
         assert.deepEqual(orange, partial.count === 2 ? [[100, 0, 90, 80]] : []);

@@ -252,21 +252,5 @@ const fileNodeToStr = (fileNode: DataNode, rootNode: DataNode, dataIndex: number
     return ` [${formatNumberCompact(fileNode.data[dataIndex])} ${unit}, ${percentage}%]`;
 }
 
-// 祖先の重複を排除して合計サイズを出す
-const calcDedupedTotalSize = (results: DataNode[] = [], dataIndex: number) => {
-    if (!results.length) return 0;
-    const idSet = new Set<number>(results.map(n => n?.id));
-    // 祖先がヒットしていない最上位ノードのみを残す
-    const topLevel = results.filter(n => {
-        let p = n?.parent;
-        while (p) {
-            if (idSet.has(p.id)) return false; // 親(祖先)がヒットしている → 除外
-            p = p.parent;
-        }
-        return true;
-    });
-    return topLevel.reduce((acc, n) => acc + (n?.data[dataIndex] || 0), 0);
-};
-
 export { FileReader, DataNode, SearchVisit, FinishCallback,
-    ProgressCallback, ErrorCallback, CloseHandler, ReadLineHandler, FileReadErrorHandler, fileNodeToStr, getRootSize, calcDedupedTotalSize, formatNumberCompact };
+    ProgressCallback, ErrorCallback, CloseHandler, ReadLineHandler, FileReadErrorHandler, fileNodeToStr, getRootSize, formatNumberCompact };
