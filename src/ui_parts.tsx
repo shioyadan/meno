@@ -253,6 +253,7 @@ const StatusBar = (props: {store: Store;}) => {
     const [searching, setSearching] = useState(false);
     const [searchProgress, setSearchProgress] = useState<number|null>(store.searchProgress);
     const [searchError, setSearchError] = useState<string|null>(null);
+    const [fileLoadError, setFileLoadError] = useState<string|null>(store.fileLoadError);
 
 
     useEffect(() => {
@@ -265,6 +266,7 @@ const StatusBar = (props: {store: Store;}) => {
         };
         const onRoot = () => {
             setRootSize(store.currentRootNode?.data[0] ?? 0);
+            setFileLoadError(store.fileLoadError);
         };
         const onRelease = () => {
             setStatusBarMessage("");
@@ -275,6 +277,7 @@ const StatusBar = (props: {store: Store;}) => {
             setSearching(false);
             setSearchProgress(0);
             setSearchError(null);
+            setFileLoadError(null);
         };
         const onSearch = () => {
             setSearchResultsCount(store.searchResults.count);
@@ -336,7 +339,7 @@ const StatusBar = (props: {store: Store;}) => {
             textAlign: "left", borderTop: "0.5px solid " + theme == "dark" ? "#383B41" : "#C6C6C6" }}
         >
             <span style={{ color: theme == "dark" ? "#C9CACB" : "#191919", fontSize: "15px" }}>
-                {statusBarMessage}{getSearchMessage()}
+                {fileLoadError ?? <>{statusBarMessage}{getSearchMessage()}</>}
             </span>
         </div>
     );

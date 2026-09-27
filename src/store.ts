@@ -69,6 +69,7 @@ class Store {
 
     // 表示データのインデックス
     dataIndex = 0;
+    fileLoadError: string|null = null;
 
     // 検索機能
     searchQuery: string = "";
@@ -113,6 +114,7 @@ class Store {
         this.currentRootNode = null;
         this.pointedPath = "";
         this.pointedFileNode = null;
+        this.fileLoadError = null;
         this.searchResults = new SearchResults();
         this.searching = false;
         this.searchProgress = 0;
@@ -160,6 +162,7 @@ class Store {
                 this.tree = null;
                 this.originalTree = null;
                 this.currentRootNode = null;
+                this.fileLoadError = `Failed to load input: ${errorMessage}`;
                 console.log(`error: ${errorMessage}`);
                 this.trigger(CHANGE.TREE_LOADED);
             }
