@@ -6,7 +6,7 @@ type ProgressCallback = (s: string, progress?: number) => void;
 type ReadLineHandler = (line: string) => void;
 type CloseHandler = () => void;
 type FileReadErrorHandler = (error: unknown) => void;
-type FileReaderSource = string | File;
+export type FileReaderSource = string | File | { url: string; name: string };
 
 const EMBEDDED_FILE_NAME = "embedded.log";
 const TEXT_STREAM_CHUNK_SIZE = 1024 * 1024;
@@ -119,6 +119,7 @@ class FileReader {
     errorHandler_: FileReadErrorHandler|null = null;
     source_: FileReaderSource;
     lineReader_: FileLineReader|null = null;
+    private fetchController_: AbortController|null = null;
     cancel_ = false;
     
     constructor(source: FileReaderSource) {
@@ -132,6 +133,8 @@ class FileReader {
     cancel(onCanceled?: () => void) {
         this.cancel_ = true;
         this.clearHandlers_();
+        this.fetchController_?.abort();
+        this.fetchController_ = null;
         const lineReader = this.lineReader_;
         this.lineReader_ = null;
         if (lineReader) {
@@ -165,7 +168,7 @@ class FileReader {
         this.errorHandler_ = null;
     }
 
-    private createLineReader_(): FileLineReader {
+    private async createLineReader_(): Promise<FileLineReader> {
         if (typeof this.source_ === "string") {
             // 埋め込み入力も擬似的なファイル stream として扱う。
             // zstd 判定は fileName ベースなので、通常ログ名にして圧縮入力とは区別する。
@@ -177,12 +180,35 @@ class FileReader {
             });
         }
 
+        if ("url" in this.source_) {
+            this.fetchController_ = new AbortController();
+            const response = await fetch(this.source_.url, {
+                signal: this.fetchController_.signal,
+                cache: "no-store",
+            });
+            if (!response.ok || !response.body) {
+                await response.body?.cancel();
+                throw new Error(`Could not read input: HTTP ${response.status}`);
+            }
+            // Blobへ全体を保存せず、ローカルFileと同じ行読み込みへ直接渡す。
+            return new FileLineReader({
+                stream: response.body,
+                fileName: this.source_.name,
+                fileSize: Number(response.headers.get("Content-Length")) || 0,
+            });
+        }
+
         return new FileLineReader({ file: this.source_ });
     }
 
     private async loadFromSource_() {
-        this.lineReader_ = this.createLineReader_();
         try {
+            const lineReader = await this.createLineReader_();
+            if (this.cancel_) {
+                lineReader.cancel();
+                return;
+            }
+            this.lineReader_ = lineReader;
             await this.lineReader_.load(
                 (line) => {
                     if (line.endsWith("\r")) {
@@ -197,28 +223,23 @@ class FileReader {
                         this.closeHandler_?.();
                     }
                 },
-                (error) => {
-                    console.error("Failed to read file:", error);
-                    if (!this.cancel_) {
-                        this.errorHandler_?.(error);
-                        this.cancel();
-                    }
-                }
+                (error) => { throw error; }
             );
+        } catch (error) {
+            if (!this.cancel_) {
+                console.error("Failed to read file:", error);
+                this.errorHandler_?.(error);
+                this.cancel();
+            }
         } finally {
+            this.fetchController_ = null;
             this.clearHandlers_();
         }
     }
 
     load() {
         if (this.cancel_) return;
-        this.loadFromSource_().catch((error) => {
-            console.error("Failed to read file:", error);
-            if (!this.cancel_) {
-                this.errorHandler_?.(error);
-                this.cancel();
-            }
-        });
+        void this.loadFromSource_();
     }
 }
 

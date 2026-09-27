@@ -28,6 +28,27 @@ Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC, a
     ./launch_httpd.sh
     ```
 
+### Shell Launcher (Linux / WSL)
+
+Download and extract [meno-latest.zip](https://shioyadan.github.io/meno/meno-latest.zip), then run `meno.sh` with Bash and Python 3 installed:
+
+```bash
+# Serve Meno and open the specified report automatically at the printed URL.
+./meno.sh path/to/report.txt
+./meno.sh path/to/report.txt.zst
+
+# Serve Meno without an initial file, or choose a fixed port.
+./meno.sh
+MENO_PORT=30080 ./meno.sh path/to/report.txt
+
+# Check and install the latest development build after confirmation.
+./meno.sh --update
+```
+
+The server listens on `127.0.0.1` and serves only Meno and the specified input file. Files are streamed into the browser, including `.zst` / `.zstd` input. For a remote machine, run the printed `ssh -L ... <host>` command on your local machine and open the printed URL locally. Stop the server with Ctrl+C.
+
+Updates show the installed and available commit and date, list changed files, and ask before replacing `meno.sh` and `index.html`. The update channel follows tested `main` builds, including changes newer than tagged releases. `MENO_UPDATE_URL` can select another compatible archive. Self-update is available in extracted distributions; for a source checkout, update with Git and rebuild with `make production`.
+
 ## Development
 
 This project is designed for development using Node.js (version 18) on Ubuntu 24.04. If you encounter compatibility issues, it is recommended to use the following Docker environment, which is based on an Ubuntu 24.04 image.
@@ -43,8 +64,14 @@ make production
 # Build debug version
 make
 
-# Check TypeScript types and run search regression tests
+# Check TypeScript types, launcher behavior, input streaming, and search regressions
 make typecheck test
+
+# Run the launcher from a source checkout after make production
+./meno.sh path/to/report.txt
+
+# Test and build the self-update distribution (meno-latest.zip)
+make latest-archive
 
 # Launch the development server
 make serve

@@ -1,21 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const ts = require('typescript');
-
-// NodeではwebpackのWorker変換がないため、非圧縮入力の検証用に境界だけを置き換える。
-require.extensions['.ts'] = (module, filename) => {
-    if (filename.endsWith('/zstd_worker.ts')) {
-        module.exports = { __esModule: true, default: class {
-            constructor() { throw new Error('Compressed input requires the browser test runner'); }
-        } };
-        return;
-    }
-    const source = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-        compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true }
-    }).outputText;
-    module._compile(source, filename);
-};
+require('./register.cjs');
 global.localStorage = { getItem: () => null };
 const { DataNode, FileReader } = require('../src/driver/driver.ts');
 const FileInfoDriver = require('../src/driver/file_info.ts').default;

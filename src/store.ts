@@ -1,4 +1,5 @@
 import {Loader, FileReader, DataNode} from "./loader";
+import type { FileReaderSource } from "./driver/driver";
 import TreeMapRenderer from "./tree_map_renderer";
 import {Settings} from "./settings";
 import {SearchResults, searchTree} from "./search";
@@ -120,7 +121,7 @@ class Store {
         this.trigger(CHANGE.TREE_RELEASED);
     }
 
-    importFile_(input: string | File) {
+    importFile_(input: FileReaderSource) {
         const fileLoadId = ++this.fileLoadId_;
         this.dataIndex = 0; // デフォルトのデータインデックスを設定
         this.releaseCurrentTree_();
@@ -132,7 +133,7 @@ class Store {
         });
     }
 
-    startFileImport_(input: string | File, fileLoadId: number) {
+    startFileImport_(input: FileReaderSource, fileLoadId: number) {
         let fileReader = new FileReader(input);
         const isActiveLoad = () => this.fileLoadId_ === fileLoadId && !fileReader.isCanceled();
 
@@ -170,7 +171,7 @@ class Store {
         this.loader_ = new Loader();
         this.settings.load();
 
-        this.on(ACTION.FILE_IMPORT, (input: string | File) => {
+        this.on(ACTION.FILE_IMPORT, (input: FileReaderSource) => {
             this.importFile_(input);
         });
 

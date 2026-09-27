@@ -26,6 +26,12 @@ const App = () => {
         const data = (window as any).MENO_INITIAL_LOADING_DATA;
         if (data && data != "" && !data.includes("__MENO_INITIAL_LOADING_DATA_PLACE_HOLDER__")) {
             storeRef.current.trigger(ACTION.FILE_IMPORT, data);
+        } else {
+            // launcherは固定の/inputだけを配信し、圧縮判定用の名前をfragmentで渡す。
+            const name = new URLSearchParams(window.location.hash.slice(1)).get("name");
+            if (name && /^https?:$/.test(window.location.protocol)) {
+                storeRef.current.trigger(ACTION.FILE_IMPORT, { url: "/input", name });
+            }
         }
 
         // コンテキストメニューを閉じるためのクリックリスナー

@@ -127,13 +127,8 @@ export class FileLineReader {
 
     cancel(onCanceled?: () => void) {
         this.canceled_ = true;
-        if (this.reader_) {
-            this.reader_
-                .cancel()
-                .catch(() => {})
-                .then(() => { onCanceled?.(); });
-        } else {
-            onCanceled?.();
-        }
+        // fetchの完了直後など、reader生成前の取り消しでも入力を解放する。
+        const canceled = this.reader_ ? this.reader_.cancel() : this.stream_.cancel();
+        canceled.catch(() => {}).then(() => { onCanceled?.(); });
     }
 }

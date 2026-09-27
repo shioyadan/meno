@@ -52,14 +52,15 @@ jobs:
         working-directory: repo-unstable
         run: npm ci
 
-      - name: Build unstable
+      - name: Build tested unstable distribution and demos
         working-directory: repo-unstable
-        run: make build-demo   # dist/ 生成を想定
+        run: make latest-archive build-demo
 
       # --- Pages 用アーティファクトを合成 ---
       - name: Compose pages artifact
         run: |
           mkdir -p site/unstable
+          cp repo-unstable/meno-latest.zip site/
           cp -a repo-stable/dist/index.html   site/           # ルート = stable
           cp -a repo-stable/demo/*.html   site/               # ルート = stable
           cp -a repo-unstable/dist/index.html site/unstable/  # /unstable = main
