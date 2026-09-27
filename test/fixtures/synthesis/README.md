@@ -32,6 +32,11 @@ of a real circuit's area, power, or implementation quality:
   `1.5 + 4 + 1.5 + 1.5 + 0 = 8.5`. Two units and one direct 1.5-area cell give
   11 cells and area 18.5. The generic variant also has 11 cells, without area.
 
+`test/synthesis_reports.test.cjs` additionally constructs malformed inputs,
+rounded parent/child totals, reordered columns, wrapped paths, deep hierarchies,
+and cancellation cases. Expected values are specified independently of the
+parser's result.
+
 Real-tool compatibility checks are separate. The scripts under `test/synthesis/`
 write local outputs to `work/synthesis/`. Generated reports, manifests, library
 files, and tool versions are not copied into these committed fixtures. Keep any

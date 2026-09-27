@@ -1,7 +1,7 @@
 import { FileLineReader } from "../file_line_reader";
 
 type FinishCallback = (fileNode: DataNode|null) => void;
-type ErrorCallback = (errorMessage: string) => void;
+type ErrorCallback = (errorMessage: string, recognized?: boolean) => void;
 type ProgressCallback = (s: string, progress?: number) => void;
 type ReadLineHandler = (line: string) => void;
 type CloseHandler = () => void;

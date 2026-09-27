@@ -1,18 +1,17 @@
 import FileInfoDriver from "./driver/file_info";
 import DC_AreaDriver from "./driver/dc_area";
 import VivadoAreaDriver from "./driver/vivado_area";
-import GenusAreaFlatpathDriver from "./driver/genus_area_flatpath";
-import GenusAreaHierpathDriver from "./driver/genus_area_hierpath";
+import GenusAreaDriver from "./driver/genus_area";
 import PrimeTimePowerDriver from "./driver/prime_time_power";
 import GenusPowerTotalDriver from "./driver/genus_power";
 
-let driverList = [FileInfoDriver, DC_AreaDriver, VivadoAreaDriver, GenusAreaFlatpathDriver, GenusAreaHierpathDriver, PrimeTimePowerDriver, GenusPowerTotalDriver];
+let driverList = [FileInfoDriver, DC_AreaDriver, VivadoAreaDriver, GenusAreaDriver, PrimeTimePowerDriver, GenusPowerTotalDriver];
 
 
 import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver/driver";
 
 class Loader {
-    driver_: FileInfoDriver | DC_AreaDriver | null;
+    driver_: InstanceType<(typeof driverList)[number]> | null;
     loadId_ = 0;
     activeReader_: FileReader | null = null;
     constructor() {
@@ -39,10 +38,9 @@ class Loader {
         const isActive = () => isCurrentLoad() && !reader.isCanceled();
         let drivers = driverList.map((d) => new d());
 
-        let loadLocal = (drivers: any) =>{
+        let loadLocal = (drivers: InstanceType<(typeof driverList)[number]>[]) =>{
             if (!isActive()) return;
-            // this.driver_ = new FileInfoDriver();
-            this.driver_ = drivers.shift();
+            this.driver_ = drivers.shift() ?? null;
             if (this.driver_) {
                 let newReader = reader.clone();
                 this.activeReader_ = newReader;
@@ -64,14 +62,18 @@ class Loader {
                         if (!isActive()) return;
                         progressCallback(message, newReader.getProgress());
                     },
-                    (errorMessage: string) => {
+                    (errorMessage: string, recognized = false) => {
                         newReader.cancel(() => {
                             if (!isActive()) return;
                             if (this.activeReader_ === newReader) {
                                 this.activeReader_ = null;
                             }
-                            console.log(`${this.driver_?.constructor.name} failed and try a next driver. ${errorMessage}`);
-                            if(drivers.length > 0){
+                            if (recognized) {
+                                console.log(`Invalid report: ${errorMessage}`);
+                                errorCallback(errorMessage);
+                            }
+                            else if(drivers.length > 0){
+                                console.log(`${this.driver_?.constructor.name} did not recognize the input. Trying the next driver.`);
                                 loadLocal(drivers);
                             }
                             else {

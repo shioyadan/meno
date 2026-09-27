@@ -122,6 +122,8 @@ class VivadoAreaDriver {
     fileNodeToStr(fileNode: DataNode, rootNode: DataNode, dataIndex: number, detailed: boolean) {
         return fileNodeToStr(fileNode, rootNode, dataIndex, "LUTs");
     }
+
+    itemNames() { return ["LUTs"]; }
 };
 
 export default VivadoAreaDriver;

@@ -67,6 +67,7 @@ build-demo: production
 
 synthesis-check:
 	python3 test/synthesis_runner_test.py
+	node test/synthesis_reports.test.cjs
 
 synth-genus synth-dc synth-yosys:
 	python3 test/synthesis/run.py $(patsubst synth-%,%,$@)
