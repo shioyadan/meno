@@ -1,10 +1,10 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useLayoutEffect, useState } from "react";
 import Store, { ACTION, CHANGE } from "./store";
 import { DataNode } from "./loader";
 
 import { fileOpen } from "browser-fs-access";
 
-import { Nav, Navbar, NavDropdown, FormControl, InputGroup, Button } from "react-bootstrap";
+import { Nav, Navbar, NavDropdown, FormControl, InputGroup, Button, Dropdown } from "react-bootstrap";
 import { Modal } from "react-bootstrap";
 
 // react-icons 経由でアイコンをインポートすると，webpack でのビルド時に必要なアイコンのみがバンドルされる
@@ -18,13 +18,133 @@ import {
     BsArrowUp,
     BsHouse,
     BsChevronRight,
-    BsCheck
+    BsChevronDown,
+    BsCheck,
+    BsBarChart
 } from 'react-icons/bs';
+
+const metricLabels: Record<string, string> = {
+    total: "Total", cell: "Cell area", net: "Net area", "cell-area": "Cell area",
+    "cell-count": "Cell count", comb: "Combinational", "non-comb": "Non-combinational",
+    "black-box": "Black box", dynamic: "Dynamic", int: "Internal", sw: "Switching",
+    leak: "Leakage", size: "Size", count: "Count"
+};
+
+const renderMetricLabel = (label: string) => {
+    const parts = label.match(/^(.*) (\([^()]+\))$/);
+    return parts ? <>{parts[1]} <span className="metric-unit">{parts[2]}</span></> : label;
+};
+
+const MetricPicker = ({ metrics, value, theme, onChange }: {
+    metrics: string[]; value: number; theme: string; onChange: (index: number) => void;
+}) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const measureRef = useRef<HTMLDivElement>(null);
+    const restoreFocus = useRef(false);
+    const [expanded, setExpanded] = useState(false);
+    const [open, setOpen] = useState(false);
+    const labels = metrics.map(name => name.replace(/^[\w-]+/, key => metricLabels[key] ?? key).replace(/\buW\b/g, "µW"));
+    const selected = labels[value] ?? "No data";
+
+    useLayoutEffect(() => {
+        const container = containerRef.current!;
+        const measure = measureRef.current!;
+        const update = () => {
+            // 切替後も同じ領域と同じ文字列を測り、境界付近の往復を防ぐ。
+            const fits = metrics.length > 1 && measure.getBoundingClientRect().width <= container.clientWidth - (expanded ? 0 : 8);
+            if (fits !== expanded) {
+                restoreFocus.current = container.contains(document.activeElement);
+                setExpanded(fits);
+                setOpen(false);
+            }
+        };
+        update();
+        const observer = new ResizeObserver(update);
+        observer.observe(container);
+        observer.observe(measure);
+        return () => observer.disconnect();
+    }, [metrics, expanded]);
+
+    useLayoutEffect(() => {
+        if (restoreFocus.current) {
+            containerRef.current?.querySelector<HTMLElement>(expanded ? "input:checked" : ".metric-toggle")?.focus({ preventScroll: true });
+            restoreFocus.current = false;
+        }
+    }, [expanded]);
+
+    useEffect(() => setOpen(false), [metrics]);
+
+    return (
+        <div ref={containerRef} className={`metric-picker ${theme}`}>
+            {/* 非表示側も自然幅だけ測る。操作や読み上げの対象にはしない。 */}
+            <div className="metric-measure" aria-hidden="true">
+                <div ref={measureRef} className="metric-expanded">
+                    <div className="metric-segments">
+                        <span className="metric-icon"><BsBarChart /></span>
+                        {labels.map((label, index) => <span className="metric-option" key={index}>{renderMetricLabel(label)}</span>)}
+                    </div>
+                </div>
+            </div>
+            {expanded ? (
+                <div className="metric-expanded">
+                    <div className="metric-segments" role="radiogroup" aria-label="Display metric">
+                        <span className="metric-icon" aria-hidden="true"><BsBarChart /></span>
+                        {labels.map((label, index) => (
+                            <label className={`metric-option${value === index ? " selected" : ""}`} key={index} title={`Size tiles by ${label}`}>
+                                <input className="visually-hidden" type="radio" name="display-metric" value={index}
+                                    checked={value === index} onChange={() => onChange(index)} />
+                                {renderMetricLabel(label)}
+                            </label>
+                        ))}
+                    </div>
+                </div>
+            ) : (
+                <Dropdown className="metric-dropdown" show={open} onToggle={setOpen} focusFirstItemOnShow="keyboard">
+                    <Dropdown.Toggle id="metric-menu" className="metric-toggle" variant="link"
+                        disabled={metrics.length < 2} aria-label={`Display metric: ${selected}`}
+                        title={`Size tiles by ${selected}`}>
+                        <BsBarChart aria-hidden="true" />
+                        <span className="metric-toggle-label">{renderMetricLabel(selected)}</span>
+                        <BsChevronDown className="metric-chevron" aria-hidden="true" />
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu variant={theme === "dark" ? "dark" : undefined} role="menu">
+                        <Dropdown.Header>Size tiles by</Dropdown.Header>
+                        {labels.map((label, index) => (
+                            <Dropdown.Item as="button" key={index} eventKey={index} role="menuitemradio"
+                                aria-checked={value === index} active={value === index} onClick={() => onChange(index)}>
+                                <BsCheck aria-hidden="true" style={{ visibility: value === index ? "visible" : "hidden" }} />
+                                <span>{renderMetricLabel(label)}</span>
+                            </Dropdown.Item>
+                        ))}
+                    </Dropdown.Menu>
+                </Dropdown>
+            )}
+        </div>
+    );
+};
 
 const ToolBar = (props: {store: Store;}) => {
     let store = props.store;
     const [searchQuery, setSearchQuery] = useState("");
     const searchInputRef = useRef<HTMLInputElement>(null);
+    const [metrics, setMetrics] = useState(store.itemNames);
+    const [dataIndex, setDataIndex] = useState(store.dataIndex);
+
+    useEffect(() => {
+        const update = () => {
+            setMetrics(store.itemNames);
+            setDataIndex(store.dataIndex);
+        };
+        store.on(CHANGE.TREE_LOADED, update);
+        store.on(CHANGE.TREE_RELEASED, update);
+        store.on(CHANGE.CHANGE_DATA_INDEX, update);
+        update();
+        return () => {
+            store.off(CHANGE.TREE_LOADED, update);
+            store.off(CHANGE.TREE_RELEASED, update);
+            store.off(CHANGE.CHANGE_DATA_INDEX, update);
+        };
+    }, [store]);
 
     const openFile = async () => {
         try {
@@ -87,6 +207,7 @@ const ToolBar = (props: {store: Store;}) => {
 
         // キーボードショートカットのイベントリスナーを追加
         const handleKeydown = (event: KeyboardEvent) => {
+            if (document.activeElement?.closest(".metric-picker")) return;
             // / キーが押されたときに検索ボックスにフォーカス
             if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey) {
                 // input要素やtextarea要素にフォーカスがある場合は無視
@@ -94,6 +215,7 @@ const ToolBar = (props: {store: Store;}) => {
                 if (activeElement && (
                     activeElement.tagName === 'INPUT' || 
                     activeElement.tagName === 'TEXTAREA' ||
+                    activeElement.tagName === 'SELECT' ||
                     (activeElement as HTMLElement).contentEditable === 'true'
                 )) {
                     return;
@@ -182,7 +304,7 @@ const ToolBar = (props: {store: Store;}) => {
 
     const renderZoomLinks = () => (
         <Nav onSelect={dispatch} activeKey={selectedKey}
-            style={{ color: theme == "dark" ? "#C9CACB" : "#ffffff" }} className="me-auto" // このクラスでリンクが左側に配置される
+            style={{ color: theme == "dark" ? "#C9CACB" : "#ffffff" }} className="zoom-controls"
         >
             <Nav.Link className="nav-link tool-bar-link" eventKey="zoom-in">
                 <BsZoomIn /> Zoom In                
@@ -198,30 +320,28 @@ const ToolBar = (props: {store: Store;}) => {
 
     const renderSearchBox = () => (
         // 検索ボックス
-        <Nav className="ms-auto">
-            <div style={{ paddingRight: "12px" }}>
-                <InputGroup size="sm" style={{ width: "180px" }}>
-                    <FormControl
-                        className={`search-input ${theme === "dark" ? "dark" : "light"}`}
-                        ref={searchInputRef}
-                        placeholder="Search nodes"
-                        aria-label="Search nodes"
-                        value={searchQuery}
-                        onChange={handleSearchInputChange}
-                    />
-                    {searchQuery && (
-                        <Button 
-                            variant="outline-secondary" 
-                            size="sm"
-                            onClick={handleSearchClear}
-                            aria-label="Clear search"
-                            className={`search-clear ${theme === "dark" ? "is-dark" : "is-light"}`}
-                        >
-                            <BsX />
-                        </Button>
-                    )}
-                </InputGroup>
-            </div>
+        <Nav className="ms-auto search-controls">
+            <InputGroup size="sm">
+                <FormControl
+                    className={`search-input ${theme === "dark" ? "dark" : "light"}`}
+                    ref={searchInputRef}
+                    placeholder="Search nodes"
+                    aria-label="Search nodes"
+                    value={searchQuery}
+                    onChange={handleSearchInputChange}
+                />
+                {searchQuery && (
+                    <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        onClick={handleSearchClear}
+                        aria-label="Clear search"
+                        className={`search-clear ${theme === "dark" ? "is-dark" : "is-light"}`}
+                    >
+                        <BsX />
+                    </Button>
+                )}
+            </InputGroup>
         </Nav>
     );
 
@@ -234,8 +354,10 @@ const ToolBar = (props: {store: Store;}) => {
             <Navbar.Toggle aria-controls="responsive-navbar-nav" />
             <Navbar.Collapse id="responsive-navbar-nav">
                 {renderMenuDropdown()}
-                {/* 横幅が狭い時はサーチ以外のアイテムをドロップダウン内に寄せる */}
+                {/* 狭幅時も指標と検索は直接操作できる位置に残す。 */}
                 {!isCompact && renderZoomLinks()}
+                <MetricPicker metrics={metrics} value={dataIndex} theme={theme}
+                    onChange={index => store.trigger(ACTION.SET_DATA_INDEX, index)} />
                 {renderSearchBox()}
             </Navbar.Collapse>
         </Navbar>
@@ -253,6 +375,8 @@ const StatusBar = (props: {store: Store;}) => {
     const [searching, setSearching] = useState(false);
     const [searchProgress, setSearchProgress] = useState<number|null>(store.searchProgress);
     const [searchError, setSearchError] = useState<string|null>(null);
+    const [fileLoadError, setFileLoadError] = useState<string|null>(store.fileLoadError);
+    const [metricName, setMetricName] = useState("");
 
 
     useEffect(() => {
@@ -264,7 +388,10 @@ const StatusBar = (props: {store: Store;}) => {
             setTheme(store.uiTheme);
         };
         const onRoot = () => {
-            setRootSize(store.currentRootNode?.data[0] ?? 0);
+            setRootSize(store.currentRootNode?.data[store.dataIndex] ?? 0);
+            setMetricName(store.itemNames[store.dataIndex] ?? "");
+            setFileLoadError(store.fileLoadError);
+            onPointer();
         };
         const onRelease = () => {
             setStatusBarMessage("");
@@ -275,6 +402,7 @@ const StatusBar = (props: {store: Store;}) => {
             setSearching(false);
             setSearchProgress(0);
             setSearchError(null);
+            setFileLoadError(null);
         };
         const onSearch = () => {
             setSearchResultsCount(store.searchResults.count);
@@ -289,6 +417,7 @@ const StatusBar = (props: {store: Store;}) => {
         store.on(CHANGE.CANVAS_POINTER_CHANGED, onPointer);
         store.on(CHANGE.CHANGE_UI_THEME, onTheme);
         store.on(CHANGE.ROOT_NODE_CHANGED, onRoot);
+        store.on(CHANGE.CHANGE_DATA_INDEX, onRoot);
         store.on(CHANGE.TREE_LOADED, onRoot);
         store.on(CHANGE.TREE_RELEASED, onRelease);
         store.on(CHANGE.SEARCH_RESULTS_CHANGED, onSearch);
@@ -298,6 +427,7 @@ const StatusBar = (props: {store: Store;}) => {
             store.off(CHANGE.CANVAS_POINTER_CHANGED, onPointer);
             store.off(CHANGE.CHANGE_UI_THEME, onTheme);
             store.off(CHANGE.ROOT_NODE_CHANGED, onRoot);
+            store.off(CHANGE.CHANGE_DATA_INDEX, onRoot);
             store.off(CHANGE.TREE_LOADED, onRoot);
             store.off(CHANGE.TREE_RELEASED, onRelease);
             store.off(CHANGE.SEARCH_RESULTS_CHANGED, onSearch);
@@ -320,7 +450,7 @@ const StatusBar = (props: {store: Store;}) => {
         }
         if (searchError) return ` | ${searchError}`;
         if (searchResultsCount === 0) return ` | Search: "${searchQuery}" - No results found`;
-        return ` | Search: "${searchQuery}" - ${searchResultsCount} result${searchResultsCount > 1 ? 's' : ''} found (Total: ${searchTotalSize}, ${toPercent(searchTotalSize, rootSize)} of root)`;
+        return ` | Search: "${searchQuery}" - ${searchResultsCount} result${searchResultsCount > 1 ? 's' : ''} found (Total ${metricName}: ${searchTotalSize}, ${toPercent(searchTotalSize, rootSize)} of root)`;
     };
 
     return (
@@ -336,7 +466,7 @@ const StatusBar = (props: {store: Store;}) => {
             textAlign: "left", borderTop: "0.5px solid " + theme == "dark" ? "#383B41" : "#C6C6C6" }}
         >
             <span style={{ color: theme == "dark" ? "#C9CACB" : "#191919", fontSize: "15px" }}>
-                {statusBarMessage}{getSearchMessage()}
+                {fileLoadError ?? <>{statusBarMessage}{getSearchMessage()}</>}
             </span>
         </div>
     );

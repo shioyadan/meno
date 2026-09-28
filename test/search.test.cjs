@@ -48,8 +48,8 @@ function paceTraversal(t, root) {
     let now = 0;
     t.mock.method(performance, 'now', () => now);
     const walk = root.walkForSearch.bind(root);
-    root.walkForSearch = function* () {
-        for (const visit of walk()) { now += 9; yield visit; }
+    root.walkForSearch = function* (dataIndex) {
+        for (const visit of walk(dataIndex)) { now += 9; yield visit; }
     };
     return milliseconds => { now += milliseconds; };
 }
@@ -350,11 +350,19 @@ test('releasing a tree cancels its pending search', async () => {
 });
 
 test('published partial highlights are cleared or replaced without late updates', async t => {
-    for (const action of ['clear', 'release', 'query', 'root', 'file']) {
+    for (const action of ['clear', 'release', 'query', 'root', 'file', 'metric']) {
         await t.test(action, async t => {
             const root = fixture();
             paceTraversal(t, root);
             const store = storeFor(root);
+            if (action === 'metric') {
+                const nodes = [root];
+                for (const value of nodes) {
+                    value.data.push(value.data[0] * 2);
+                    nodes.push(...Object.values(value.children));
+                }
+                store.loader_.itemNames = () => ['first', 'second'];
+            }
             let partial;
             let stoppedCount;
             const completions = [];
@@ -369,6 +377,7 @@ test('published partial highlights are cleared or replaced without late updates'
                 if (action === 'release') store.releaseCurrentTree_();
                 if (action === 'query') store.trigger(ACTION.SEARCH_NODES, 'other');
                 if (action === 'root') store.trigger(ACTION.SET_ROOT_NODE, root.children['MATCH-dir']);
+                if (action === 'metric') store.trigger(ACTION.SET_DATA_INDEX, 1);
                 if (action === 'file') store.trigger(ACTION.FILE_IMPORT,
                     row(1, 0, 'replacement', true, 0) + row(2, 1, 'match-new', false, 99));
                 assert.notEqual(store.searchResults, partial);
@@ -380,11 +389,12 @@ test('published partial highlights are cleared or replaced without late updates'
             await delay(20);
             assert.ok(partial);
             assert.equal(partial.count, stoppedCount);
-            const expectedCount = { clear: 0, release: 0, query: 1, root: 2, file: 1 }[action];
+            const expectedCount = { clear: 0, release: 0, query: 1, root: 2, file: 1, metric: 3 }[action];
             assert.equal(store.searchResults.count, expectedCount);
             if (action === 'query') assert.deepEqual(completions, ['other']);
             if (action === 'root') assert.equal(store.searchResults.matches(root.children['match-outside']), false);
             if (action === 'file') assert.equal(store.searchResults.totalSize, 99);
+            if (action === 'metric') assert.equal(store.searchResults.totalSize, 70);
         });
     }
 });
@@ -485,4 +495,80 @@ test('renderer updates discovered direct and hidden matches before the search fi
         if (partial.count === 2) sawHidden = true;
     });
     assert.equal(sawHidden, true);
+});
+
+test('metric changes replace pending search totals and preserve the displayed root', async () => {
+    const root = fixture();
+    root.data.push(9, 0);
+    root.children['MATCH-dir'].data.push(7, 0);
+    root.children['MATCH-dir'].children['match.txt'].data.push(2, 0);
+    root.children['MATCH-dir'].children.other.data.push(5, 0);
+    root.children['match-outside'].data.push(2, 0);
+    const store = storeFor(root);
+    store.loader_.itemNames = () => ['area', 'cells', 'zero'];
+    let changes = 0;
+    store.on(CHANGE.CHANGE_DATA_INDEX, () => changes++);
+    store.trigger(ACTION.SEARCH_NODES, 'match');
+    store.trigger(ACTION.SET_DATA_INDEX, 1);
+    await settled(store);
+    assert.equal(store.dataIndex, 1);
+    assert.equal(store.tree, root);
+    assert.equal(store.searchResults.count, 3);
+    assert.equal(store.searchResults.totalSize, 9);
+    for (const invalid of [-1, 3, 0.5, NaN, '0', 1]) store.trigger(ACTION.SET_DATA_INDEX, invalid);
+    assert.equal(changes, 1);
+    store.trigger(ACTION.SET_ROOT_NODE, root.children['MATCH-dir']);
+    await settled(store);
+    assert.equal(store.dataIndex, 1);
+    assert.equal(store.searchResults.totalSize, 7);
+    store.trigger(ACTION.SET_DATA_INDEX, 0);
+    store.trigger(ACTION.SET_DATA_INDEX, 2);
+    await settled(store);
+    assert.equal(store.searchResults.totalSize, 0);
+    assert.equal(store.searchResults.count, 2);
+    assert.equal(store.tree, root.children['MATCH-dir']);
+});
+
+test('compact count searches avoid materializing node data and reset on file import', async () => {
+    const root = await load(row(1, 0, 'root', true, 0) + row(2, 1, 'match', true, 0) +
+        row(3, 2, 'match-child', false, 100) + row(4, 1, 'other', false, 900));
+    const prototype = Object.getPrototypeOf(root);
+    const data = Object.getOwnPropertyDescriptor(prototype, 'data');
+    Object.defineProperty(prototype, 'data', { configurable: true, get() { throw new Error('Node data materialized'); } });
+    let result;
+    try { result = await searchTree(root, 'match', new AbortController().signal, undefined, undefined, 1); }
+    finally { Object.defineProperty(prototype, 'data', data); }
+    assert.equal(result.totalSize, 1);
+    assert.equal(result.count, 2);
+    const driver = new FileInfoDriver();
+    const child = root.children.match.children['match-child'];
+    assert.match(driver.fileNodeToStr(child, root, 1, false), /1 items.*50\.00%/);
+    assert.match(driver.fileNodeToStr(child, root, 0, false), /100B.*10\.00%/);
+    const store = storeFor(root);
+    store.loader_.driver_ = driver;
+    store.trigger(ACTION.SET_DATA_INDEX, 1);
+    const loaded = new Promise(resolve => store.on(CHANGE.TREE_LOADED, resolve));
+    store.trigger(ACTION.FILE_IMPORT, row(1, 0, 'replacement', true, 0) + row(2, 1, 'leaf', false, 5));
+    assert.equal(store.dataIndex, 0);
+    assert.deepEqual(store.itemNames, []);
+    await loaded;
+    assert.deepEqual(store.itemNames, ['size', 'count']);
+});
+
+test('treemap recomputes tile areas by metric and handles all-zero child values', () => {
+    const TreeMap = require('../src/tree_map.ts').default;
+    const root = node(1, 'root', 100, [node(2, 'a', 75), node(3, 'b', 25)]);
+    root.data = [100, 10, 0];
+    root.children.a.data = [75, 1, 0];
+    root.children.b.data = [25, 9, 0];
+    const map = new TreeMap();
+    const draw = index => map.createTreeMap(root, 1000, 1000, [0, 0, 1000, 1000], [0, 0, 0, 0], index);
+    const area = entry => (entry.rect[2] - entry.rect[0]) * (entry.rect[3] - entry.rect[1]);
+    const share = entries => area(entries.find(entry => entry.key === 'a')) / 1000000;
+    assert.equal(share(draw(0)), 0.75);
+    assert.equal(share(draw(1)), 0.1);
+    const empty = draw(2);
+    assert.deepEqual(empty.map(entry => entry.key), ['root']);
+    assert.ok(empty.every(entry => entry.rect.every(Number.isFinite)));
+    assert.equal(share(draw(0)), 0.75);
 });

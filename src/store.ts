@@ -23,6 +23,7 @@ enum ACTION {
     SET_PARENT_AS_ROOT,
     SEARCH_NODES,
     CLEAR_SEARCH,
+    SET_DATA_INDEX,
     ACTION_END, // 末尾
 };
 
@@ -69,6 +70,11 @@ class Store {
 
     // 表示データのインデックス
     dataIndex = 0;
+    fileLoadError: string|null = null;
+
+    get itemNames(): string[] {
+        return this.originalTree ? this.loader_.itemNames() : [];
+    }
 
     // 検索機能
     searchQuery: string = "";
@@ -113,6 +119,7 @@ class Store {
         this.currentRootNode = null;
         this.pointedPath = "";
         this.pointedFileNode = null;
+        this.fileLoadError = null;
         this.searchResults = new SearchResults();
         this.searching = false;
         this.searchProgress = 0;
@@ -160,6 +167,7 @@ class Store {
                 this.tree = null;
                 this.originalTree = null;
                 this.currentRootNode = null;
+                this.fileLoadError = `Failed to load input: ${errorMessage}`;
                 console.log(`error: ${errorMessage}`);
                 this.trigger(CHANGE.TREE_LOADED);
             }
@@ -190,6 +198,14 @@ class Store {
             this.settings.uiTheme = theme;
             this.saveSetting();
             this.trigger(CHANGE.CHANGE_UI_THEME);
+        });
+
+        this.on(ACTION.SET_DATA_INDEX, (index: number) => {
+            if (!this.tree || !Number.isInteger(index) || index < 0 || index >= this.itemNames.length || index === this.dataIndex) return;
+            this.dataIndex = index;
+            this.treeMapRenderer.clear();
+            this.trigger(CHANGE.CHANGE_DATA_INDEX);
+            this.startSearch_(this.searchQuery);
         });
 
         this.on(ACTION.SET_ROOT_NODE, (nodeToSetAsRoot: DataNode) => {
@@ -251,7 +267,7 @@ class Store {
             if (controller.signal.aborted || this.searchController_ !== controller) return;
             this.searchResults = results;
             this.trigger(CHANGE.SEARCH_RESULTS_CHANGED);
-        }).then(results => {
+        }, this.dataIndex).then(results => {
             if (!results || this.searchController_ !== controller) return;
             this.searchResults = results;
             this.searching = false;

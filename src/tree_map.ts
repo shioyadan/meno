@@ -110,7 +110,7 @@ class TreeMap {
             // 分割木を元に分割領域を生成
             let areas: AreasMap = {};
             let baseRect = cache.rect;
-            self.divideRects(divTree, areas, baseRect);
+            if (divTree) self.divideRects(divTree, areas, baseRect);
 
             // 子階層に縦横比を伝える
             if (fileNode.children) {
@@ -153,6 +153,8 @@ class TreeMap {
         keys = keys.filter((key) => {
             return !(this.getCriteria(fileChildren[key]) <= 0);
         });
+        // 配線面積など、全て0の指標では子タイルを作らない。
+        if (!keys.length) return null;
         // フィルタ結果を反映させる
         let fileChildrenFiltered: Record<string, DataNode> = {};
         for (let key of keys) {

@@ -1,0 +1,65 @@
+{
+  "creator": "Yosys synthetic fixture (hand-authored, not tool output)",
+  "modules": {
+    "mock_netlist": {
+      "attributes": {
+        "top": "0001"
+      },
+      "cells": {
+        "tiles[2].unit": {
+          "type": "mock_unit"
+        },
+        "tiles[7].unit": {
+          "type": "mock_unit"
+        },
+        "top_gate": {
+          "type": "MOCK_GATE"
+        }
+      }
+    },
+    "mock_unit": {
+      "cells": {
+        "flag": {
+          "type": "MOCK_GATE"
+        },
+        "register": {
+          "type": "MOCK_FF"
+        },
+        "u_comb": {
+          "type": "mock_comb"
+        }
+      }
+    },
+    "mock_comb": {
+      "cells": {
+        "g0": {
+          "type": "MOCK_GATE"
+        },
+        "g1": {
+          "type": "MOCK_GATE"
+        },
+        "empty_cost": {
+          "type": "MOCK_ZERO"
+        }
+      }
+    },
+    "MOCK_GATE": {
+      "attributes": {
+        "blackbox": 1,
+        "area": "1.5"
+      }
+    },
+    "MOCK_FF": {
+      "attributes": {
+        "whitebox": "0001",
+        "area": "4.0"
+      }
+    },
+    "MOCK_ZERO": {
+      "attributes": {
+        "blackbox": true,
+        "area": "0.0"
+      }
+    }
+  }
+}

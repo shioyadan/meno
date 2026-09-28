@@ -1,7 +1,7 @@
 import { FileLineReader } from "../file_line_reader";
 
 type FinishCallback = (fileNode: DataNode|null) => void;
-type ErrorCallback = (errorMessage: string) => void;
+type ErrorCallback = (errorMessage: string, recognized?: boolean) => void;
 type ProgressCallback = (s: string, progress?: number) => void;
 type ReadLineHandler = (line: string) => void;
 type CloseHandler = () => void;
@@ -37,7 +37,7 @@ class DataNode {
         return null;
     }
 
-    *walkForSearch(): Generator<SearchVisit> {
+    *walkForSearch(dataIndex = 0): Generator<SearchVisit> {
         function* children(node: DataNode): Generator<DataNode> {
             for (const key in node.children) {
                 yield node.children[key];
@@ -46,7 +46,7 @@ class DataNode {
 
         // 深い階層でも再帰スタックを使わず、各ノードの入退場で中断できる。
         const stack = [{ node: this as DataNode, children: children(this) }];
-        yield { entering: true, id: this.id, key: this.key, size: this.data[0] ?? 0 };
+        yield { entering: true, id: this.id, key: this.key, size: this.data[dataIndex] ?? 0 };
         while (stack.length) {
             const frame = stack[stack.length - 1];
             const child = frame.children.next();
@@ -56,7 +56,7 @@ class DataNode {
             } else {
                 const node = child.value;
                 stack.push({ node, children: children(node) });
-                yield { entering: true, id: node.id, key: node.key, size: node.data[0] ?? 0 };
+                yield { entering: true, id: node.id, key: node.key, size: node.data[dataIndex] ?? 0 };
             }
         }
     }

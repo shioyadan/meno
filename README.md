@@ -2,9 +2,17 @@
 
 Meno is a tool for visualizing hierarchical data, such as directory tree sizes or synthesized circuit sizes. It can be built into a single, standalone HTML file.
 
-Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC, and hierarchical power reports from PrimeTime and Genus.
+Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC,
+hierarchical power reports from PrimeTime, Genus, and Joules, Joules category
+power summaries, and Yosys JSON netlists.
 
 ![demo](./demo/meno.gif)
+
+Use the metric selector (bar-chart icon) in the toolbar to choose the value represented by tile sizes,
+such as area, cell count, or power. The available choices depend on the loaded
+report. Choices appear as segments when there is room, or as a dropdown button
+when space is limited. Tile labels and search totals follow the selected metric; opening a
+new file resets the selection to its first metric.
 
 ## How to Use
 
@@ -70,7 +78,7 @@ make production
 # Build debug version
 make
 
-# Check TypeScript types, launcher behavior, input streaming, and search regressions
+# Check types, launcher behavior, input streaming, search, and synthesis reports
 make typecheck test
 
 # Run the launcher from a source checkout after make production
@@ -91,6 +99,40 @@ make docker-run
 # Alternatively, after setting up the Docker environment, you can launch 'make' or other commands directly.
 ./docker/run.sh make
 ```
+
+### Synthesis Test Data
+
+The repository includes an independent small RTL design and scripts for Genus,
+Design Compiler, and Yosys. Configure the tools and licenses locally, put the
+executables on PATH, and supply library files through environment variables:
+
+```sh
+export MENO_LIBERTY_FILES='/path/to/logic.lib:/path/to/registers.lib'
+make synth-genus synth-yosys
+
+export MENO_DB_FILES='/path/to/logic.db:/path/to/registers.db'
+make synth-dc
+
+# Generate and validate a Yosys netlist without an external cell library.
+env -u MENO_LIBERTY_FILES make check-yosys
+```
+
+Results go to a new directory under `work/synthesis/` for each run. Normal tests
+use hand-authored mock reports and JSON and do not require synthesis tools.
+Generated outputs remain local; CI also checks a fresh Yosys netlist. See
+[generation instructions](test/synthesis/README.md) and
+[fixture design](test/fixtures/synthesis/README.md).
+
+For Yosys, open the `design.json` produced by `write_json` in Meno. Meno shows
+instance hierarchy and cell counts; it also shows cell area when all used leaf
+cells have a library `area` attribute. `stat -json` is a statistics report and
+is not the supported input format. Genus area paths may be indented or full
+paths. Genus and Joules hierarchical power tables share a parser and support
+full instance paths or short names with a `Lvl` column. Joules category summaries
+use a separate parser and appear under a `Total` root, with only the metrics
+present in the report; dynamic power is derived when internal and switching
+power are available. Power units are preserved. Select a single PDB frame
+before exporting, as multiple frames in one input are rejected.
 
 ## License
 

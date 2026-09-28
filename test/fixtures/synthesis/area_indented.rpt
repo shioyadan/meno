@@ -1,0 +1,10 @@
+Synthetic parser fixture; hand-authored, not synthesis output.
+
+Instance Module Cell-Count Cell-Area Net-Area Total-Area
+------------------------------------------------------
+mock_chip                                                                                                40   80.0   20.0  100.0
+  control                                                                              mock_control       5   10.0    2.0   12.0
+  banks[3].worker                                                                      mock_worker       20   40.0   10.0   50.0
+    stage_with_an_intentionally_long_mock_instance_name                                mock_stage        12   24.0    6.0   30.0
+  queue                                                                                mock_queue        15   30.0    8.0   38.0
+  idle                                                                                 mock_idle          0    0.0    0.0    0.0

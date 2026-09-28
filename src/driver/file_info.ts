@@ -65,8 +65,8 @@ class CompactFileInfoNode implements DataNode {
         return this.store_.hasChildren(this.nodeId_);
     }
 
-    walkForSearch(): Generator<SearchVisit> {
-        return this.store_.walkForSearch(this.nodeId_);
+    walkForSearch(dataIndex = 0): Generator<SearchVisit> {
+        return this.store_.walkForSearch(this.nodeId_, dataIndex);
     }
 
     get searchNodeCount(): number|null {
@@ -278,14 +278,15 @@ class CompactFileInfoStore {
         return this.getFirstChildId_(id) !== NO_ID;
     }
 
-    *walkForSearch(rootId: number): Generator<SearchVisit> {
+    *walkForSearch(rootId: number, dataIndex: number): Generator<SearchVisit> {
         // 検索だけで全ノードのwrapperやchildren辞書を実体化しない。
         let id = rootId;
         let entering = true;
         while (true) {
             if (entering) {
                 const page = this.getPage_(id);
-                yield { entering: true, id, key: this.getKey(id), size: page.size[this.nodeIndex_(id)] };
+                const values = dataIndex === DATA_COUNT ? page.count : page.size;
+                yield { entering: true, id, key: this.getKey(id), size: values[this.nodeIndex_(id)] };
                 const child = this.getFirstChildId_(id);
                 if (child !== NO_ID) {
                     id = child;
@@ -610,15 +611,15 @@ class FileInfoDriver {
         }
         str += "B";
 
-        const rootSize = rootNode.data[0];
+        const rootSize = rootNode.data[dataIndex];
         const percentage =
-            rootSize > 0 ? ((fileNode.data[0] / rootSize) * 100).toFixed(2) : "0.00";
+            rootSize > 0 ? ((fileNode.data[dataIndex] / rootSize) * 100).toFixed(2) : "0.00";
 
         const fmt = formatNumberCompact;
         if (detailed) {
-            return ` [size: ${str} (${percentage}%), count: ${fmt(fileNode.data[1])}]`;
+            return ` [size: ${str}${dataIndex === 0 ? ` (${percentage}%)` : ""}, count: ${fmt(fileNode.data[1])}${dataIndex === DATA_COUNT ? ` (${percentage}%)` : ""}]`;
         } else {
-            return ` [${str} (${percentage}%)]`;
+            return ` [${dataIndex === DATA_COUNT ? `${fmt(fileNode.data[1])} items` : str} (${percentage}%)]`;
         }
         
     }

@@ -28,3 +28,10 @@ jobs:
     # ビルド
     - name: Run tests using Makefile
       run: make typecheck test production
+
+    # 商用ツールを必要としない経路で、RTLから読み込みまで検証する。
+    - name: Install Yosys
+      run: sudo apt-get update && sudo apt-get install -y yosys
+
+    - name: Generate and check Yosys reports
+      run: make check-yosys
