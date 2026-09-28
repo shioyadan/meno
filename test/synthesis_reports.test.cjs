@@ -5,6 +5,8 @@ const path = require('node:path');
 const { stopWorkers } = require('./register.cjs');
 const { Loader, FileReader } = require('../src/loader.ts');
 const GenusArea = require('../src/driver/genus_area.ts').default;
+const GenusPower = require('../src/driver/genus_power.ts').default;
+const JoulesPowerCategory = require('../src/driver/joules_power_category.ts').default;
 
 before(() => mock.method(console, 'log', () => {}));
 after(async () => { await stopWorkers(); mock.restoreAll(); });
@@ -16,7 +18,8 @@ const close = (actual, expected, tolerance = 1e-9) => assert.ok(Math.abs(actual 
 function load(input, driver = new Loader()) {
     const reader = typeof input === 'string' ? new FileReader(input) : input;
     return new Promise((resolve, reject) => driver.load(reader,
-        root => resolve({ root, driver }), () => {}, message => reject(new Error(message))));
+        root => resolve({ root, driver }), () => {},
+        (message, recognized) => reject(Object.assign(new Error(message), { recognized }))));
 }
 function snapshot(node) {
     return { key: node.key, data: node.data,
@@ -66,6 +69,7 @@ test('synthetic local area sums local categories through hierarchy', async () =>
 
 test('synthetic power preserves units and derives missing dynamic power', async () => {
     const { root, driver } = await load(fixture('power.rpt'));
+    assert.equal(driver.driver_.constructor.name, 'GenusPowerDriver');
     assert.equal(root.key, 'mock_power');
     assert.deepEqual(root.data, [12, 10, 7, 3, 2, 60]);
     assert.deepEqual(root.children.others.data, [3.5, 3, 2, 1, 0.5, 10]);
@@ -218,6 +222,98 @@ test('power hierarchy rejects invalid levels, missing parents and duplicate sibl
     await assert.rejects(load(header + root + child + child), /Duplicate instance path/);
 });
 
+test('power category totals exclude summary rows and derive dynamic power', async () => {
+    const { root, driver } = await load(fixture('power_categories.rpt'));
+    assert.equal(driver.driver_.constructor.name, 'JoulesPowerCategoryDriver');
+    assert.equal(root.key, 'Total');
+    assert.deepEqual(driver.itemNames(), ['total (uW)', 'dynamic (uW)', 'int (uW)', 'sw (uW)', 'leak (uW)']);
+    assert.deepEqual(root.data, [15, 12, 6, 6, 3]);
+    assert.deepEqual(Object.keys(root.children).sort(), ['group_a', 'group_b', 'unused']);
+    assert.deepEqual(root.children.group_a.data, [9, 8, 5, 3, 1]);
+    assert.deepEqual(root.children.unused.data, [0, 0, 0, 0, 0]);
+    assert.match(driver.fileNodeToStr(root.children.group_a, root, 1, false), /8.*66\.67%/);
+    checkMetrics(root, 5);
+});
+
+test('power categories expose only available power, cell count and area metrics', async () => {
+    const { root, driver } = await load(fixture('power_categories_columns.rpt'));
+    assert.equal(driver.driver_.constructor.name, 'JoulesPowerCategoryDriver');
+    assert.deepEqual(driver.itemNames(), ['total (uW)', 'dynamic (uW)', 'leak (uW)', 'cell-count', 'cell-area']);
+    assert.deepEqual(root.data, [15, 12, 3, 5, 18]);
+    assert.deepEqual(root.children.group_a.data, [9, 8, 1, 3, 11]);
+    assert.deepEqual(root.children.group_b.data, [6, 4, 2, 2, 7]);
+    assert.equal(root.children.others, undefined);
+    assert.match(driver.fileNodeToStr(root.children.group_a, root, 3, false), /3.*60\.00%/);
+    assert.match(driver.fileNodeToStr(root.children.group_a, root, 4, false), /11.*61\.11%/);
+    checkMetrics(root, 5);
+    const reordered = await load('Power Unit: nW\nTotal Category Dynamic Leakage Area Cells\n' +
+        '9 group_a 8 1 11 3\n6 group_b 4 2 7 2\n15 Subtotal 12 3 18 5\n');
+    assert.deepEqual(reordered.root.data, root.data);
+    assert.deepEqual(reordered.root.children.group_a.data, root.children.group_a.data);
+    assert.equal(reordered.driver.itemNames()[0], 'total (nW)');
+});
+
+test('power categories reject incomplete tables, invalid metrics and inconsistent totals', async () => {
+    const text = fixture('power_categories_columns.rpt');
+    await assert.rejects(load(text.replace('group_a 3', 'group_a 1.5')), /Invalid Cells/);
+    await assert.rejects(load(text.replace('11.000', '-1.000')), /Invalid Area/);
+    await assert.rejects(load(text.replace('11.000', 'NaN')), /Invalid Area/);
+    await assert.rejects(load(text.replace('group_b', 'group_a')), /Duplicate instance path/);
+    await assert.rejects(load(text.replace('Subtotal 5', 'Subtotal 4')), /Child totals/);
+    await assert.rejects(load(text.replace('Subtotal 5 18.000', 'Subtotal 5 12.000')), /Child totals/);
+    await assert.rejects(load(text.replace(/^Subtotal.*\n|^Percentage.*\n/gm, '')), /no subtotal/);
+    await assert.rejects(load(text.replace(/^Subtotal.*\n/gm, '')), /percentages precede/);
+    await assert.rejects(load(text.replace('Dynamic', 'Unspecified')), /Missing Dynamic/);
+    await assert.rejects(load(text.replace('Dynamic', 'Leakage')), /Duplicate power column/);
+    await assert.rejects(load(text.replace('group_a 3 11.000', 'group_a 3')), /Incomplete power row/);
+    await assert.rejects(load(text + 'extra 1 1 1 1 2 0%\n'), /Unexpected row after/);
+    await assert.rejects(load(text + 'Category Cells Area Leakage Dynamic Total Row%\n'), /Multiple power tables/);
+});
+
+test('power drivers leave other table structures unrecognized', async () => {
+    const preamble = 'Power Unit: mW\nScope: Instance /mock_tree\n' + 'Report preamble\n'.repeat(160);
+    await assert.rejects(load(preamble + fixture('power_categories.rpt'), new GenusPower()), { recognized: false });
+    await assert.rejects(load(preamble + fixture('power.rpt'), new JoulesPowerCategory()), { recognized: false });
+    await assert.rejects(load(preamble, new GenusPower()), { recognized: false });
+    await assert.rejects(load(preamble, new JoulesPowerCategory()), { recognized: false });
+    const { driver } = await load(preamble + fixture('power_categories.rpt'));
+    assert.equal(driver.driver_.constructor.name, 'JoulesPowerCategoryDriver');
+    assert.equal(driver.itemNames()[0], 'total (uW)');
+});
+
+test('recognized power corruption and mixed tables do not fall back to another driver', async () => {
+    const hierarchy = fixture('power.rpt');
+    const category = fixture('power_categories_columns.rpt');
+    for (const [text, wrongTable, expected] of [
+        [hierarchy, category, 'GenusPowerDriver'],
+        [category, hierarchy, 'JoulesPowerCategoryDriver'],
+    ]) {
+        for (const [input, message] of [
+            [text.replace('Leakage', 'Unspecified'), /Missing Leakage column/],
+            [text + wrongTable.split('\n').find(line => line.includes('Total')) + '\n', /Multiple power tables/],
+        ]) {
+            const driver = new Loader();
+            await assert.rejects(load(input, driver), message);
+            assert.equal(driver.driver_.constructor.name, expected);
+        }
+    }
+});
+
+test('power drivers reset metrics, units and table state on a new load', async () => {
+    for (const [driver, first, next] of [
+        [new GenusPower(), 'power.rpt', 'power.rpt'],
+        [new JoulesPowerCategory(), 'power_categories.rpt', 'power_categories_columns.rpt'],
+    ]) {
+        await load(fixture(first), driver);
+        const input = fixture(next).replace(/^Power Unit:.*\n/m, '');
+        const reloaded = await load(input, driver);
+        const fresh = await load(input);
+        assert.deepEqual(snapshot(reloaded.root), snapshot(fresh.root));
+        assert.deepEqual(driver.itemNames(), fresh.driver.itemNames());
+        assert.equal(driver.itemNames()[0], 'total');
+    }
+});
+
 test('deep area paths finalize without recursion', async () => {
     const path = ['root', ...Array.from({ length: 10000 }, (_, i) => `level${i}`)].join('/');
     const { root } = await load(heading + `root top 1 1.0 0.0 1.0\n${path} m 1 1.0 0.0 1.0\n`);
@@ -261,6 +357,11 @@ test('local area wrapped paths and headerless legacy input remain supported', as
     const legacy = await load('top 25 100 20 5 0 1\nchild 10 40 8 2 0 1\n');
     assert.equal(legacy.root.data[0], 25);
     assert.equal(legacy.root.children.child.data[0], 10);
+    for (const [name, design] of [['Category', 'Total'], ['Cells', 'Instance']]) {
+        const named = await load(`${name} 12 100 4 2 0 ${design}\nleaf 6 50 4 2 0 unit\n`);
+        assert.equal(named.driver.driver_.constructor.name, 'DcAreaDriver');
+        assert.deepEqual(named.root.data, [12, 8, 4, 0]);
+    }
 });
 
 test('Vivado and PrimeTime inputs still select their original drivers', async () => {

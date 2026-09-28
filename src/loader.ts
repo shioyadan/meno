@@ -4,9 +4,10 @@ import DC_AreaDriver from "./driver/dc_area";
 import VivadoAreaDriver from "./driver/vivado_area";
 import GenusAreaDriver from "./driver/genus_area";
 import PrimeTimePowerDriver from "./driver/prime_time_power";
-import GenusPowerTotalDriver from "./driver/genus_power";
+import GenusPowerDriver from "./driver/genus_power";
+import JoulesPowerCategoryDriver from "./driver/joules_power_category";
 
-let driverList = [FileInfoDriver, DC_AreaDriver, YosysDriver, VivadoAreaDriver, GenusAreaDriver, PrimeTimePowerDriver, GenusPowerTotalDriver];
+let driverList = [FileInfoDriver, DC_AreaDriver, YosysDriver, VivadoAreaDriver, GenusAreaDriver, PrimeTimePowerDriver, GenusPowerDriver, JoulesPowerCategoryDriver];
 
 
 import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback} from "./driver/driver";

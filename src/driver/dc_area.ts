@@ -16,7 +16,9 @@ class AreaParser implements ReportParser {
         const text = line.trim();
         // 製品バナーのない別形式も、数値行を旧形式として取り込む前に除外する。
         const columns = text.split(/\s+/);
-        if (/^Instance\s+Module\b/.test(text) || (columns.includes("Cells") && columns.includes("Instance"))) {
+        const powerHeader = (columns.includes("Cells") && columns.includes("Instance")) ||
+            (columns.includes("Category") && columns.includes("Total"));
+        if (/^Instance\s+Module\b/.test(text) || (powerHeader && columns.every(column => !Number.isFinite(Number(column))))) {
             throw new Error("Not a DC area report.");
         }
         if (/^Hierarchical area distribution/.test(text)) this.recognized = true;

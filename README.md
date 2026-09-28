@@ -2,7 +2,9 @@
 
 Meno is a tool for visualizing hierarchical data, such as directory tree sizes or synthesized circuit sizes. It can be built into a single, standalone HTML file.
 
-Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC, hierarchical power reports from PrimeTime and Genus, and Yosys JSON netlists.
+Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC,
+hierarchical power reports from PrimeTime, Genus, and Joules, Joules category
+power summaries, and Yosys JSON netlists.
 
 ![demo](./demo/meno.gif)
 
@@ -125,8 +127,12 @@ For Yosys, open the `design.json` produced by `write_json` in Meno. Meno shows
 instance hierarchy and cell counts; it also shows cell area when all used leaf
 cells have a library `area` attribute. `stat -json` is a statistics report and
 is not the supported input format. Genus area paths may be indented or full
-paths. Genus power reports preserve their reported units; select a single PDB
-frame before exporting, as multiple frames in one input are rejected.
+paths. Genus and Joules hierarchical power tables share a parser and support
+full instance paths or short names with a `Lvl` column. Joules category summaries
+use a separate parser and appear under a `Total` root, with only the metrics
+present in the report; dynamic power is derived when internal and switching
+power are available. Power units are preserved. Select a single PDB frame
+before exporting, as multiple frames in one input are rejected.
 
 ## License
 

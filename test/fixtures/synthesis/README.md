@@ -11,6 +11,7 @@ The fixtures use Meno's BSD 3-Clause license.
 | --- | --- |
 | `area_indented.rpt`, `area_paths.rpt` | Indented and full paths for the same mock tree; omitted top module; indexed and long names; zero values; direct area/count remainders |
 | `power.rpt` | Units, exponent notation, derived dynamic power, indexed paths, zero values, and per-metric remainders |
+| `power_categories.rpt`, `power_categories_columns.rpt` | Category summaries with derived or explicit dynamic power; optional cell counts and areas; subtotal and percentage footers |
 | `area_local.rpt` | Inclusive totals with local combinational/noncombinational/black-box areas; implicit parents; long paths |
 | `yosys/mapped.json` | Reused module definitions; invented cells with areas 1.5, 4, and 0; blackbox/whitebox attributes; direct cells |
 | `yosys/generic.json` | The same invented hierarchy using generic cell types without area attributes |
@@ -25,6 +26,10 @@ of a real circuit's area, power, or implementation quality:
 - Power: total power is 12 uW = 2 leakage + 7 internal + 3 switching.
   Dynamic power is therefore 10 uW. The root has 60 cells; its immediate
   children have 30 + 20, leaving 10 directly in the root.
+- Category power: total power is 15 uW = 3 leakage + 6 internal + 6 switching.
+  The two nonzero categories contribute 9 + 6; dynamic power is 8 + 4 = 12.
+  The variant with cell metrics has 3 + 2 = 5 cells and area 11 + 7 = 18.
+  Subtotal and percentage rows are summaries, not additional categories.
 - Local area: the root's inclusive total is 80 = 10 local + 30 frontend + 40 port.
   Category sums over the explicit rows are 47 combinational, 19
   noncombinational, and 14 black-box area. Their sum is also 80.
@@ -34,8 +39,9 @@ of a real circuit's area, power, or implementation quality:
 
 `test/synthesis_reports.test.cjs` additionally constructs malformed inputs,
 rounded parent/child totals, reordered columns, wrapped paths, deep hierarchies,
-and cancellation cases. Expected values are specified independently of the
-parser's result.
+short power instance names with explicit levels, driver selection, repeated
+loads, and cancellation cases. Expected values are specified independently of
+the parser's result.
 
 Real-tool compatibility checks are separate. The scripts under `test/synthesis/`
 write local outputs to `work/synthesis/`; `make check-yosys` checks a fresh JSON
