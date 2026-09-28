@@ -28,13 +28,13 @@ Supported tools and formats:
 
 * Download and extract the pre-built files from [this link](https://github.com/shioyadan/meno/releases).
 * Drag and drop an input file onto `index.html` to visualize it.
-* To embed your input file into a standalone HTML, use `embed.sh` (or `meno.sh --embed` in launcher distributions):
+* With Bash and Python 3 installed, use `meno.sh` to embed a report or view it through a local server:
     ```bash
     # Generate an HTML file (your_area_report.txt.html) in the same directory.
-    ./embed.sh your_area_report.txt
+    ./meno.sh --embed your_area_report.txt
 
-    # Launch a web server, which is useful to view the output HTML from a remote client. 
-    ./launch_httpd.sh
+    # Serve Meno with the report loaded at the printed URL.
+    ./meno.sh your_area_report.txt
     ```
 
 ### Shell Launcher (Linux / WSL)

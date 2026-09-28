@@ -14,13 +14,12 @@ test: launcher-check synthesis-check
 production: licenses
 	mkdir -p dist
 	npx webpack --mode production
-	cp src/embed.sh dist/embed.sh
-	cp src/launch_httpd.sh dist/launch_httpd.sh
+	rm -f dist/embed.sh dist/launch_httpd.sh
 	cp meno.sh LICENSE.md dist/
 	sed -i 's/^build=0-source-unknown$$/build=$(BUILD_ID)/' dist/meno.sh
 	cp ./THIRD-PARTY-LICENSES.md dist/THIRD-PARTY-LICENSES.md
 	cp ./README.md dist/README.md
-	chmod 755 dist/embed.sh dist/launch_httpd.sh dist/meno.sh
+	chmod 755 dist/meno.sh
 
 serve:
 	npx webpack serve --open
@@ -52,15 +51,12 @@ launcher-check:
 
 latest-archive: typecheck test production
 	rm -f meno-latest.zip
+	rm -rf dist/meno-latest
 	mkdir -p dist/meno-latest
-	cp dist/index.html dist/meno.sh dist/embed.sh dist/launch_httpd.sh dist/README.md dist/LICENSE.md dist/THIRD-PARTY-LICENSES.md dist/bundle.js.LICENSE.txt dist/meno-latest/
+	cp dist/index.html dist/meno.sh dist/README.md dist/LICENSE.md dist/THIRD-PARTY-LICENSES.md dist/bundle.js.LICENSE.txt dist/meno-latest/
 	cd dist; zip -qr ../meno-latest.zip meno-latest
 	rm -r dist/meno-latest
 	zip -T meno-latest.zip
-
-embed:
-	make production
-	sed -i.bak -e '/^__MENO_INITIAL_LOADING_DATA_PLACE_HOLDER__/{r ./work/rsd-vidado-area.txt' -e 'd}' ./dist/index.html
 
 build-demo: production
 	cd demo; unzstd *.zst

@@ -157,7 +157,7 @@ class LauncherTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assert_embedded(output, content)
 
-    def test_embed_source_build_and_legacy_entry(self):
+    def test_embed_source_build_and_distribution(self):
         (self.install / "index.html").unlink()
         dist = self.install / "dist"
         dist.mkdir()
@@ -169,11 +169,8 @@ class LauncherTest(unittest.TestCase):
         self.assert_embedded(Path(str(source) + ".html"), "report\n")
         (dist / "meno.sh").write_text(LAUNCHER)
         (dist / "meno.sh").chmod(0o755)
-        legacy = dist / "embed.sh"
-        legacy.write_text((REPO / "src/embed.sh").read_text())
-        legacy.chmod(0o755)
-        output = self.root / "legacy.html"
-        result = self.run_script(str(source), str(output), script=legacy)
+        output = self.root / "distribution.html"
+        result = self.run_script("--embed", str(source), str(output), script=dist / "meno.sh")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assert_embedded(output, "report\n")
 

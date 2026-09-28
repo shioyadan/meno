@@ -74,7 +74,7 @@ const getTrimBounds = (text: string): { start: number, end: number } => {
     return { start, end };
 };
 
-// embed.sh が HTML に埋め込むデータは、起動時点では巨大な string として存在する。
+// meno.sh --embed が HTML に埋め込むデータは、起動時点では巨大な string として存在する。
 // その string 自体の保持は避けられないが、ここで ReadableStream に変換しておくと、
 // FileReader 側に生テキスト専用の行分割経路を持たずに済み、通常の File 入力と同じ
 // FileLineReader の backpressure/cancel/error 処理を使える。
