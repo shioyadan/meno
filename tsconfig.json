@@ -10,6 +10,8 @@
         // (node16 など) ではなく bundler 向けの import 解決規則を使う。
         "moduleResolution": "bundler"
     },
+    // ローカル作業資料や生成物を型検査対象に含めない。
+    "include": ["src/**/*"],
     "exclude": [
       "node_modules"
     ]
