@@ -47,10 +47,6 @@ Each run creates a new `work/synthesis/<tool>-<unique suffix>/` directory:
 | DC | `area.rpt`, `power.rpt`, timing, netlist |
 | Yosys | `stats.txt`, `stats.json`, `design.json`, netlist |
 
-Open Genus area/power, DC area, or Yosys `design.json` in Meno. DC power is
-generated for inspection; Meno's existing PrimeTime parser is not a DC power
-parser. Yosys `stat -json` is retained as an independent statistics check.
-
 `run.log` retains tool diagnostics. `manifest.json` records the tool version,
 input hashes, and library filenames and hashes. A failed run exits with an
 error and keeps its directory for diagnosis. Reports from earlier runs are
@@ -64,13 +60,33 @@ the design. Actual hierarchy and cell counts can still differ between tools
 and versions. Genus/DC power reports use vectorless activity. No LEF is loaded,
 so the flow does not validate physical interconnect area or post-route power.
 
+## Reading reports in Meno
+
+Open Genus area/power, DC area, or Yosys `design.json` in Meno. DC power is
+generated for inspection; Meno's existing PrimeTime parser is not a DC power
+parser.
+
+Yosys input is the `design.json` produced by `write_json`. Meno shows instance
+hierarchy and cell counts, and cell area when all used leaf cells have a library
+`area` attribute. `stat -json` is retained as an independent statistics check
+and is not the supported input format.
+
+Genus area paths may be indented or full paths. Genus and Joules hierarchical
+power tables share a parser and support full instance paths or short names
+with a `Lvl` column. Power units are preserved. Select a single PDB frame
+before exporting, as multiple frames in one input are rejected.
+
+Joules category summaries use a separate parser and appear under a `Total`
+root, with only the metrics present in the report. Dynamic power is derived
+when internal and switching power are available.
+
 ## Local outputs and committed fixtures
 
 Keep generated logs, reports, netlists, manifests, and library links in `work/`.
 They may contain machine paths, library names, tool versions, and other
 installation details. The runner does not sanitize them for publication.
 
-Committed fixtures under `test/fixtures/synthesis/` are independently
+Committed [fixtures](../fixtures/synthesis/README.md) are independently
 hand-authored mock reports and JSON. Do not replace them with generated reports
 or copies that only substitute names or numbers. Add coverage using invented
 hierarchies and fixed values with hand-checkable totals. The source circuit
