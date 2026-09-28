@@ -6,6 +6,12 @@ Currently, Meno supports hierarchical area reports from Vivado, Genus, and DC, h
 
 ![demo](./demo/meno.gif)
 
+Use the metric selector (bar-chart icon) in the toolbar to choose the value represented by tile sizes,
+such as area, cell count, or power. The available choices depend on the loaded
+report. Choices appear as segments when there is room, or as a dropdown button
+when space is limited. Tile labels and search totals follow the selected metric; opening a
+new file resets the selection to its first metric.
+
 ## How to Use
 
 ### Web Version

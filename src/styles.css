@@ -27,6 +27,142 @@ html, body, #root {
     margin-right: 2px; /* アイコンと文字の間の余白 */
 }
 
+/* 検索欄の幅を先に確保し、残りの領域で指標の表示方法を切り替える。 */
+.navbar > .navbar-collapse { min-width: 0; }
+.navbar .zoom-controls { flex-shrink: 0; }
+.navbar .search-controls {
+    flex: 0 0 clamp(120px, 35vw, 180px);
+    min-width: 0;
+    padding-right: 12px;
+}
+
+.metric-picker {
+    --metric-bg: rgb(30 33 40 / 30%);
+    --metric-border: rgb(255 255 255 / 7%);
+    --metric-text: #aeb6c3;
+    --metric-active: #414e64;
+    --metric-active-text: #f3f6fb;
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    margin: 0 12px 0 8px;
+}
+
+.metric-picker.light {
+    --metric-bg: rgb(37 44 67 / 24%);
+    --metric-text: #c0c6d7;
+    --metric-active: #5a6887;
+    --metric-active-text: #ffffff;
+}
+
+.metric-expanded {
+    display: inline-flex;
+    align-items: center;
+    width: max-content;
+    padding-left: 12px;
+    border-left: 1px solid rgb(255 255 255 / 11%);
+}
+
+.metric-icon {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 7px;
+    color: #a7afbd;
+}
+.metric-icon svg { width: 15px; height: 15px; }
+
+.metric-segments {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 5px;
+    background: var(--metric-bg);
+}
+
+.metric-option {
+    position: relative;
+    margin: 0;
+    padding: 3px 10px;
+    border-radius: 3px;
+    color: var(--metric-text);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 20px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.metric-option:hover { background: rgb(255 255 255 / 4%); color: var(--metric-active-text); }
+.metric-option.selected {
+    color: var(--metric-active-text);
+    background: var(--metric-active);
+}
+
+.metric-unit { font-size: 11px; opacity: 0.8; margin-left: 2px; }
+
+.metric-option:focus-within, .metric-toggle:focus-visible {
+    outline: 2px solid #79a4d3;
+    outline-offset: 2px;
+}
+
+/* 非表示の測定内容で文書の横幅を広げない。メニューはこのclip領域の外に置く。 */
+.metric-measure {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.metric-dropdown { width: max-content; max-width: 100%; }
+.metric-picker .metric-toggle {
+    --bs-btn-hover-bg: var(--metric-bg);
+    --bs-btn-hover-color: var(--metric-active-text);
+    --bs-btn-active-bg: var(--metric-bg);
+    --bs-btn-active-color: var(--metric-active-text);
+    --bs-btn-disabled-bg: var(--metric-bg);
+    --bs-btn-disabled-color: var(--metric-text);
+    --bs-btn-focus-box-shadow: none;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    height: 32px;
+    padding: 4px 10px;
+    border: 1px solid var(--metric-border);
+    border-radius: 5px;
+    background: var(--metric-bg);
+    color: var(--metric-active-text);
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+}
+.metric-toggle-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.metric-toggle svg { flex-shrink: 0; width: 15px; height: 15px; color: #a7afbd; }
+.metric-toggle .metric-chevron { width: 10px; height: 10px; margin-left: 4px; }
+.metric-picker .metric-toggle::after { display: none; }
+.metric-picker .metric-toggle:hover:not(:disabled), .metric-picker .metric-toggle[aria-expanded="true"] {
+    color: var(--metric-active-text);
+    border-color: rgb(255 255 255 / 24%);
+}
+.metric-picker .metric-toggle:disabled { opacity: 0.6; }
+.metric-toggle:disabled .metric-chevron { display: none; }
+.metric-picker .dropdown-menu {
+    min-width: 190px;
+    max-width: calc(100vw - 24px);
+    border-radius: 5px;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
+    font-size: 13px;
+}
+.metric-picker .dropdown-item { display: flex; align-items: center; gap: 8px; }
+.metric-picker .dropdown-item.active { background: #3d536d; color: #ffffff; }
+.metric-picker.light .dropdown-item.active { background: #e3ecf7; color: #233b5c; }
+
 /* 検索ボックス */
 /* プレースホルダ */
 .navbar .search-input.dark::placeholder {

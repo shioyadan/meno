@@ -255,8 +255,10 @@ const TreeMapCanvas = (props: {
         // input要素やtextarea要素にフォーカスがある場合は無視
         const activeElement = document.activeElement;
         if (activeElement && (
+            activeElement.closest(".metric-picker") ||
             activeElement.tagName === "INPUT" ||
             activeElement.tagName === "TEXTAREA" ||
+            activeElement.tagName === "SELECT" ||
             (activeElement as HTMLElement).contentEditable === "true"
         )) {
             return;
