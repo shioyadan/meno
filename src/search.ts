@@ -37,14 +37,15 @@ type SearchProgressCallback = (progress: number|null) => void;
 
 function searchTree(root: DataNode, query: string, signal: AbortSignal,
     onProgress?: SearchProgressCallback,
-    onPartialResults?: (results: SearchResults) => void): Promise<SearchResults|null> {
+    onPartialResults?: (results: SearchResults) => void,
+    dataIndex = 0): Promise<SearchResults|null> {
     if (signal.aborted) return Promise.resolve(null);
     const results = new SearchResults();
     if (!query.trim()) return Promise.resolve(results);
     const term = query.toLowerCase();
 
     return new Promise((resolve, reject) => {
-        let visits = root.walkForSearch();
+        let visits = root.walkForSearch(dataIndex);
         let total = root.searchNodeCount ?? nodeCounts.get(root) ?? null;
         let counting = onProgress !== undefined && total === null;
         let counted = 0;
@@ -84,7 +85,7 @@ function searchTree(root: DataNode, query: string, signal: AbortSignal,
                             total = counted;
                             nodeCounts.set(root, counted);
                             counting = false;
-                            visits = root.walkForSearch();
+                            visits = root.walkForSearch(dataIndex);
                             reportProgress(0);
                             if (signal.aborted) return;
                         } else if (next.value.entering) {

@@ -251,3 +251,11 @@ for (const [index, filename] of process.argv.slice(2).entries()) {
         checkMetrics(root, driver.itemNames().length);
     });
 }
+
+test('PrimeTime metric selection includes direct power and selected percentages', async () => {
+    const { root, driver } = await load('Report : Averaged Power\n--------------------\n' +
+        'root 3 2 1 6 100\n  leaf (sample) 1 1 0.5 2.5 41.7\n');
+    assert.deepEqual(root.children.others.data, [3.5, 2, 1, 0.5]);
+    assert.match(driver.fileNodeToStr(root.children['leaf (sample)'], root, 1, false), /1.*33\.33%/);
+    assert.match(driver.fileNodeToStr(root.children['leaf (sample)'], root, 3, false), /0\.5.*50\.00%/);
+});

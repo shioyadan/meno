@@ -1,4 +1,5 @@
-import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback, formatNumberCompact } from "./driver";
+import { FileReader, DataNode, FinishCallback, ProgressCallback, ErrorCallback } from "./driver";
+import { describeReport } from "./report";
 
 class PrimeTimePowerDriver {
 
@@ -165,24 +166,27 @@ class PrimeTimePowerDriver {
 
         reader.onClose(() => {
             // finalize: 親が子の合計を含む前提で残差 > 0 なら others を作る
-            const finalize = (node: DataNode): number => {
-                let sum = 0;
+            const finalize = (node: DataNode): number[] => {
+                const sum = [0, 0, 0, 0];
                 if (node.children) {
                     for (const k in node.children) {
-                        sum += finalize(node.children[k]);
+                        const child = finalize(node.children[k]);
+                        child.forEach((value, i) => sum[i] += value);
                     }
                 }
-                const org = node.data[0] ?? 0;
-                const remaining = org - sum;
-                if (node.children && Object.keys(node.children).length !== 0 && remaining > 0) {
+                // 指標を切り替えても直接所属分が消えないよう、全列の残差を保持する。
+                const remaining = node.data.map((value, i) => Math.max(0, value - sum[i]));
+                if (node.children && Object.keys(node.children).length !== 0 && remaining.some(value => value > 0)) {
                     const n = new DataNode();
-                    n.data = [remaining, 0, 0, 0];
-                    n.key = "others";
+                    n.data = remaining;
+                    let key = "others";
+                    for (let suffix = 2; node.children[key]; suffix++) key = `others (${suffix})`;
+                    n.key = key;
                     n.parent = node;
                     n.id = nextID++;
-                    node.children["others"] = n;
+                    node.children[key] = n;
                 }
-                return org;
+                return node.data;
             };
 
             if (isPX_) {
@@ -198,16 +202,7 @@ class PrimeTimePowerDriver {
     }
 
     fileNodeToStr(fileNode: DataNode, rootNode: DataNode, dataIndex: number, detailed: boolean) {
-        const rootSize = rootNode.data[0];
-        const percentage =
-            rootSize > 0 ? ((fileNode.data[0] / rootSize) * 100).toFixed(2) : "0.00";
-
-        const fmt = formatNumberCompact;
-        if (detailed) {
-            return ` [total: ${fmt(fileNode.data[0])} (${percentage}%), int: ${fmt(fileNode.data[1])}, sw: ${fmt(fileNode.data[2])}, leak: ${fmt(fileNode.data[3])}]`;
-        } else {
-            return ` [${fmt(fileNode.data[0])} (${percentage}%)]`;
-        }
+        return describeReport(fileNode, rootNode, dataIndex, detailed, this.itemNames());
     }
 
     itemNames() {
