@@ -67,6 +67,39 @@ test('synthetic local area sums local categories through hierarchy', async () =>
     checkMetrics(root, 4);
 });
 
+test('indexed name prefixes stay distinct from real hierarchy parents', async () => {
+    const rows = [
+        'unit[2] 10.0 0 4.0 0.0 0.0 cell',
+        'unit[2]/leaf 6.0 0 6.0 0.0 0.0 cell',
+        'unit[2].lane 20.0 0 20.0 0.0 0.0 cell',
+        'unit[3].lane 5.0 0 5.0 0.0 0.0 cell',
+    ];
+    for (const ordered of [rows, [...rows].reverse()]) {
+        const { root } = await load('root 35.0 100 0.0 0.0 0.0 top\n' + ordered.join('\n'));
+        assert.deepEqual(root.data, [35, 35, 0, 0]);
+        const group = root.children.unit;
+        assert.deepEqual(group.data, root.data);
+        assert.deepEqual(group.children['[2]'].data, [10, 10, 0, 0]);
+        assert.deepEqual(group.children['[2]'].children.leaf.data, [6, 6, 0, 0]);
+        assert.deepEqual(group.children['[2]'].children.others.data, [4, 4, 0, 0]);
+        assert.deepEqual(group.children['[2].lane'].data, [20, 20, 0, 0]);
+        assert.deepEqual(group.children['[3]'].children['.lane'].data, [5, 5, 0, 0]);
+        assert.equal(group.children['[2]'].children['.lane'], undefined);
+        checkMetrics(root, 4);
+    }
+});
+
+test('array display groups do not absorb a sibling with the same base name', async () => {
+    const { root } = await load(heading + 'root top 3 9.0 0.0 9.0\n' +
+        'root/unit[0].leaf cell 1 2.0 0.0 2.0\nroot/unit cell 1 3.0 0.0 3.0\n' +
+        'root/unit[1].leaf cell 1 4.0 0.0 4.0\n');
+    assert.deepEqual(Object.keys(root.children).sort(), ['unit', 'unit[0].leaf', 'unit[1].leaf']);
+    assert.deepEqual(root.children.unit.data, [3, 3, 0, 1]);
+    assert.deepEqual(root.children['unit[0].leaf'].data, [2, 2, 0, 1]);
+    assert.deepEqual(root.children['unit[1].leaf'].data, [4, 4, 0, 1]);
+    checkMetrics(root, 4);
+});
+
 test('synthetic power preserves units and derives missing dynamic power', async () => {
     const { root, driver } = await load(fixture('power.rpt'));
     assert.equal(driver.driver_.constructor.name, 'GenusPowerDriver');

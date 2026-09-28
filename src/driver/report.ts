@@ -36,24 +36,54 @@ export class ReportTree {
             throw new Error("Invalid report row.");
         }
         let node = this.root_;
-        for (const part of path) {
-            for (const key of part.split(/(\[[^\]]*\])/).filter(Boolean)) {
-                let child = node.children![key];
-                if (!child) {
-                    child = new DataNode();
-                    child.children = Object.create(null);
-                    child.key = key;
-                    child.id = this.nextId_++;
-                    child.parent = node;
-                    child.data = Array(this.metrics_).fill(0);
-                    node.children![key] = child;
-                    this.nodes_.push(child);
-                }
-                node = child;
+        for (const key of path) {
+            let child = node.children![key];
+            if (!child) {
+                child = new DataNode();
+                child.children = Object.create(null);
+                child.key = key;
+                child.id = this.nextId_++;
+                child.parent = node;
+                child.data = Array(this.metrics_).fill(0);
+                node.children![key] = child;
+                this.nodes_.push(child);
             }
+            node = child;
         }
         if (this.explicit_.has(node)) throw new Error("Duplicate instance path.");
         this.explicit_.set(node, { data, tolerance });
+    }
+
+    private groupChildren(node: DataNode) {
+        const children = node.children!;
+        node.children = Object.create(null);
+        for (const child of Object.values(children)) {
+            const parts = child.key.split(/(\[[^\]]*\])/).filter(Boolean);
+            let parent = node;
+            let prefix = "";
+            for (let i = 0; i < parts.length; i++) {
+                prefix += parts[i];
+                // 実在する兄弟名と衝突する接頭辞はグループにしない。
+                if (i === parts.length - 1 || children[prefix]) {
+                    child.key = parts.slice(i).join("");
+                    child.parent = parent;
+                    parent.children![child.key] = child;
+                    break;
+                }
+                let group = parent.children![parts[i]];
+                if (!group) {
+                    group = new DataNode();
+                    group.children = Object.create(null);
+                    group.key = parts[i];
+                    group.id = this.nextId_++;
+                    group.parent = parent;
+                    group.data = Array(this.metrics_).fill(0);
+                    parent.children![group.key] = group;
+                }
+                group.data = group.data.map((value, index) => value + child.data[index]);
+                parent = group;
+            }
+        }
     }
 
     finish(): DataNode {
@@ -94,6 +124,8 @@ export class ReportTree {
                 rest.data = remainder;
                 node.children![key] = rest;
             }
+            // 表示用の配列グループは、実際の階層で集計を終えてから作る。
+            this.groupChildren(node);
         }
         roots[0].parent = null;
         return roots[0];
