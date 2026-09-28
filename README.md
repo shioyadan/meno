@@ -46,8 +46,11 @@ Download and extract [meno-latest.zip](https://shioyadan.github.io/meno/meno-lat
 ./meno.sh path/to/report.txt
 ./meno.sh path/to/report.txt.zst
 
-# Serve Meno without an initial file, or choose a fixed port.
+# Show help (also available with --help).
 ./meno.sh
+
+# Serve Meno without an initial file, or choose a fixed port.
+./meno.sh --serve
 MENO_PORT=30080 ./meno.sh path/to/report.txt
 
 # Generate a standalone HTML file with an uncompressed UTF-8 report embedded.

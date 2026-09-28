@@ -9,14 +9,24 @@ set -eu
 build=0-source-unknown
 
 usage() {
+    echo "Meno - visualize hierarchical reports and directory sizes." >&2
+    echo >&2
     echo "Usage:" >&2
-    echo "  $0 [FILE]" >&2
-    echo "  $0 --embed FILE [OUTPUT.html]" >&2
-    echo "  $0 --update" >&2
+    echo "  $0 FILE                       Serve an input file (.zst supported)." >&2
+    echo "  $0 --serve                    Start the server without an input file." >&2
+    echo "  $0 --embed FILE [OUTPUT.html]  Embed UTF-8 input in a standalone HTML file." >&2
+    echo "  $0 --update                   Install the latest development build (asks first)." >&2
+    echo "  $0 --help                     Show this help (also shown with no arguments)." >&2
+    echo >&2
+    echo "Embedded HTML defaults to FILE.html. Updates require an extracted distribution." >&2
+    echo "Serving, embedding, and updating require Python 3." >&2
+    echo "Set MENO_PORT to choose a port, for example: MENO_PORT=30080 $0 FILE" >&2
+    echo "For remote access, run the printed SSH tunnel command on your local machine." >&2
+    echo "Press Ctrl+C to stop the server." >&2
     exit "${1:-2}"
 }
 
-if [ "$#" -eq 1 ] && [ "$1" = "--help" ]; then
+if [ "$#" -eq 0 ] || { [ "$#" -eq 1 ] && [ "$1" = "--help" ]; }; then
     usage 0
 fi
 
@@ -102,8 +112,12 @@ if [ "${1:-}" = "--embed" ]; then
     embed=1
     shift
     if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then usage; fi
+elif [ "${1:-}" = "--serve" ]; then
+    shift
+    if [ "$#" -ne 0 ]; then usage; fi
 elif [ "${1:-}" = "--" ]; then
     shift
+    if [ "$#" -eq 0 ]; then usage; fi
 elif [[ "${1:-}" = -* ]]; then
     usage
 fi

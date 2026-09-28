@@ -287,26 +287,38 @@ class LauncherTest(unittest.TestCase):
             for path in ("/private.txt", "/../private.txt", "/%2e%2e/private.txt", "/input/", "/meno.sh"):
                 self.assertEqual(self.request(url, path)[0], 404)
 
-    def test_no_input_and_source_build(self):
+    def test_no_arguments_and_help_exit_without_starting_server(self):
+        for missing_html in (False, True):
+            if missing_html:
+                (self.install / "index.html").unlink()
+            for args in ((), ("--help",)):
+                with self.subTest(missing_html=missing_html, args=args):
+                    result = self.run_script(*args, MENO_PORT="invalid")
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn("Usage:", result.stderr)
+                    self.assertIn("--serve", result.stderr)
+                    self.assertIn("--embed", result.stderr)
+                    self.assertEqual(result.stdout, "")
+
+    def test_serve_without_input_and_source_build(self):
         (self.install / "dist").mkdir()
         (self.install / "index.html").rename(self.install / "dist/index.html")
-        with self.server() as (url, process):
+        with self.server("--serve") as (url, process):
             self.assertEqual(url.fragment, "")
             self.assertEqual(self.request(url, "/")[0], 200)
             self.assertEqual(self.request(url, "/input")[0], 404)
 
     def test_invalid_port_input_and_arguments(self):
         for port in ("", "0", "65536", "-1", "abc"):
-            result = self.run_script(MENO_PORT=port)
+            result = self.run_script("--serve", MENO_PORT=port)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("MENO_PORT must be", result.stderr)
-        for args in (("missing.log",), ("--unknown",), ("a", "b")):
+        for args in (("missing.log",), ("--unknown",), ("a", "b"), ("--serve", "extra"), ("--",)):
             self.assertNotEqual(self.run_script(*args).returncode, 0)
-        self.assertEqual(self.run_script("--help").returncode, 0)
 
     def test_fixed_port_conflict_is_reported(self):
-        with self.server() as (url, process):
-            result = self.run_script(MENO_PORT=str(url.port))
+        with self.server("--serve") as (url, process):
+            result = self.run_script("--serve", MENO_PORT=str(url.port))
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("Could not start the Meno server", result.stderr)
 
