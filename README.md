@@ -109,6 +109,6 @@ report formats, and fixtures.
 
 ## License
 
-Copyright (C) 2016-2025 Ryota Shioya <shioya@ci.i.u-tokyo.ac.jp>
+Copyright (C) 2016-2026 Ryota Shioya <shioya@ci.i.u-tokyo.ac.jp>
 
 This application is released under the 3-Clause BSD License, see LICENSE.md. This application bundles third-party packages in accordance with the licenses presented in THIRD-PARTY-LICENSES.md.
