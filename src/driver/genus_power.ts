@@ -8,6 +8,7 @@ class PowerParser implements ReportParser {
     private columns_: string[] = [];
     private tree_ = new ReportTree(6);
     private rows_ = 0;
+    private ancestors_: { level: number, path: string[] }[] = [];
 
     read(line: string) {
         const unit = line.match(/^\s*Power Unit:\s*(W|mW|uW|nW)\s*$/);
@@ -36,7 +37,22 @@ class PowerParser implements ReportParser {
         const hasDynamic = this.columns_.includes("Dynamic");
         const dynamic = hasDynamic ? get("Dynamic") : internal + switching;
         const tolerance = (name: string) => rounding(token(name));
-        this.tree_.add(token("Instance").split("/").filter(Boolean),
+        const instance = token("Instance");
+        let path = instance.split("/").filter(Boolean);
+        const level = this.columns_.includes("Lvl") ? reportNumber(token("Lvl"), "Lvl", true) : null;
+        if (level !== null) {
+            while (this.ancestors_.length && this.ancestors_[this.ancestors_.length - 1].level >= level) this.ancestors_.pop();
+            // 短いinstance名の形式では、列位置や空白幅ではなく階層レベルで親を決める。
+            if (!instance.includes("/") && level > 0) {
+                const parent = this.ancestors_[this.ancestors_.length - 1];
+                if (!parent || parent.level !== level - 1) throw new Error("Missing parent for power hierarchy level.");
+                path = [...parent.path, ...path];
+            }
+            this.ancestors_.push({ level, path });
+        } else if (!instance.includes("/") && this.rows_) {
+            throw new Error("Relative power paths require a Lvl column.");
+        }
+        this.tree_.add(path,
             [get("Total"), dynamic, internal, switching, get("Leakage"), get("Cells")],
             [tolerance("Total"), hasDynamic ? tolerance("Dynamic") : tolerance("Internal") + tolerance("Switching"),
                 tolerance("Internal"), tolerance("Switching"), tolerance("Leakage"), 0]);

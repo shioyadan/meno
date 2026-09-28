@@ -178,6 +178,46 @@ test('power duplicates, repeated tables, invalid numbers and truncated rows fail
     await assert.rejects(load(text.replace('Pct_cells', 'Cells')), /Duplicate power column/);
 });
 
+test('power levels distinguish repeated short instance names under different parents', async () => {
+    const rows = [
+        [0, 8, 2, 4, 6, 12, '/mock_tree'],
+        [1, 4, 1, 2, 3, 6, '/mock_tree/left'],
+        [2, 2, 0.5, 1, 1.5, 3, '/mock_tree/left/shared'],
+        [1, 4, 1, 2, 3, 6, '/mock_tree/right'],
+        [2, 2, 0.5, 1, 1.5, 3, '/mock_tree/right/shared'],
+    ];
+    const input = (shortNames, levels) => 'Power Unit: mW\n' +
+        (levels ? 'Lvl ' : '') + 'Cells Leakage Internal Switching Total Instance\n' +
+        rows.map(([level, ...values]) => {
+            if (shortNames && level) values[5] = ' '.repeat(level * 3) + values[5].split('/').at(-1);
+            return [...(levels ? [level] : []), ...values].join(' ');
+        }).join('\n');
+    const flat = await load(input(false, true));
+    const indented = await load(input(true, true));
+    const withoutLevels = await load(input(false, false));
+    assert.deepEqual(snapshot(indented.root), snapshot(flat.root));
+    assert.deepEqual(snapshot(withoutLevels.root), snapshot(flat.root));
+    assert.deepEqual(indented.root.data, [12, 10, 4, 6, 2, 8]);
+    for (const branch of ['left', 'right']) {
+        const parent = indented.root.children[branch];
+        assert.deepEqual(parent.children.shared.data, [3, 2.5, 1, 1.5, 0.5, 2]);
+        assert.deepEqual(parent.children.others.data, [3, 2.5, 1, 1.5, 0.5, 2]);
+    }
+    checkMetrics(indented.root, 6);
+    await assert.rejects(load(input(true, false)), /require a Lvl column/);
+});
+
+test('power hierarchy rejects invalid levels, missing parents and duplicate siblings', async () => {
+    const header = 'Lvl Cells Leakage Internal Switching Total Instance\n';
+    const root = '0 4 1 2 3 6 /mock_tree\n';
+    for (const level of ['-1', '0.5', 'invalid', '1e999']) {
+        await assert.rejects(load(header + root + `${level} 2 0.5 1 1.5 3 leaf\n`), /Invalid Lvl/);
+    }
+    await assert.rejects(load(header + root + '2 2 0.5 1 1.5 3 leaf\n'), /Missing parent/);
+    const child = '1 2 0.5 1 1.5 3 leaf\n';
+    await assert.rejects(load(header + root + child + child), /Duplicate instance path/);
+});
+
 test('deep area paths finalize without recursion', async () => {
     const path = ['root', ...Array.from({ length: 10000 }, (_, i) => `level${i}`)].join('/');
     const { root } = await load(heading + `root top 1 1.0 0.0 1.0\n${path} m 1 1.0 0.0 1.0\n`);
