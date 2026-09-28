@@ -11,7 +11,7 @@ test: launcher-check synthesis-check
 	node test/search.test.cjs
 	node test/file_reader.test.cjs
 
-production:
+production: licenses
 	mkdir -p dist
 	npx webpack --mode production
 	cp src/embed.sh dist/embed.sh
@@ -27,8 +27,10 @@ serve:
 
 init:
 	npm install
-	npx license-checker --production --relativeLicensePath > THIRD-PARTY-LICENSES.md
-	sed -i "s|$(shell pwd)/||g" THIRD-PARTY-LICENSES.md
+	$(MAKE) licenses
+
+licenses:
+	node tools/license_notices.js
 
 clean:
 	rm dist -f -r
@@ -75,4 +77,4 @@ check-yosys:
 synth-genus synth-dc synth-yosys:
 	python3 test/synthesis/run.py $(patsubst synth-%,%,$@)
 
-.PHONY: synthesis-check check-yosys synth-genus synth-dc synth-yosys all typecheck test production serve init clean pack latest-archive launcher-check build-demo
+.PHONY: synthesis-check check-yosys synth-genus synth-dc synth-yosys all typecheck test production serve init licenses clean pack latest-archive launcher-check build-demo
