@@ -26,7 +26,7 @@ export class ReportTree {
     private explicit_ = new Map<DataNode, { data: number[], tolerance: number[] }>();
     private nextId_ = 0;
 
-    constructor(private metrics_: number, private local_: boolean[] = []) {
+    constructor(private metrics_: number, private local_: boolean[] = [], private allowExcess_: boolean[] = []) {
         this.root_.children = Object.create(null);
     }
 
@@ -107,7 +107,7 @@ export class ReportTree {
                 if (!Number.isFinite(total) || !Number.isFinite(sum)) throw new Error("Report total overflow.");
                 const difference = total - sum;
                 const epsilon = Math.max(comparisonTolerance, Math.abs(total) * Number.EPSILON * 8);
-                if (difference < -epsilon) throw new Error("Child totals exceed their parent.");
+                if (difference < -epsilon && !this.allowExcess_[i]) throw new Error("Child totals exceed their parent.");
                 hasRemainder ||= difference > epsilon;
                 remainder[i] = Math.max(0, difference);
                 node.data[i] = total;

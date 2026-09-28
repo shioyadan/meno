@@ -19,7 +19,9 @@ class PowerParser implements ReportParser {
             if (kind !== "hierarchy") throw new Error("Not a hierarchical power report.");
             this.recognized = true;
             this.table_.setColumns(words, ["Cells", "Leakage", "Internal", "Switching", "Total", "Instance"]);
-            this.tree_ = new ReportTree(this.itemNames().length);
+            // 階層表の連続量は加工・丸めによる不一致があっても記載値を保つ。
+            const names = this.itemNames();
+            this.tree_ = new ReportTree(names.length, [], names.map(name => name !== "cell-count"));
             return;
         }
         if (!this.recognized || !line.trim() || /^\s*[-=]+\s*$/.test(line)) return;

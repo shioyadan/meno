@@ -38,7 +38,8 @@ of a real circuit's area, power, or implementation quality:
   11 cells and area 18.5. The generic variant also has 11 cells, without area.
 
 `test/synthesis_reports.test.cjs` additionally constructs malformed inputs,
-rounded parent/child totals, reordered columns, wrapped paths, deep hierarchies,
+rounded or inconsistent parent/child values, masked cell counts, array-name
+prefix collisions, reordered columns, wrapped paths, deep hierarchies,
 short power instance names with explicit levels, driver selection, repeated
 loads, and cancellation cases. Expected values are specified independently of
 the parser's result.

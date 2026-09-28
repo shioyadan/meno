@@ -142,6 +142,56 @@ test('area headers control column order and accept exponent values and an omitte
     assert.deepEqual(root.children.others.data, [3, 3, 0, 1]);
 });
 
+test('masked cell counts omit that metric without losing area values', async () => {
+    for (const [parent, child] of [['xxx', 'XX'], ['xxx', '1'], ['3', 'XX']]) {
+        const { root, driver } = await load(heading + `root ${parent} 12.0 3.0 15.0\n` +
+            `  leaf cell ${child} 4.0 1.0 5.0\n`);
+        assert.deepEqual(driver.itemNames(), ['total', 'cell', 'net']);
+        assert.deepEqual(root.data, [15, 12, 3]);
+        assert.deepEqual(root.children.leaf.data, [5, 4, 1]);
+        assert.deepEqual(root.children.others.data, [10, 8, 2]);
+        checkMetrics(root, 3);
+    }
+    const reordered = 'Instance Module Total-Area Net-Area Cell-Count Cell-Area Wireload\n' +
+        'root 15.0 3.0 xxx 12.0 model\nroot/leaf cell 5.0 1.0 xx 4.0 model\n';
+    assert.deepEqual((await load(reordered)).root.data, [15, 12, 3]);
+    const numericModule = await load(heading + 'root 123 3 12.0 3.0 15.0\n');
+    assert.deepEqual(numericModule.root.data, [15, 12, 3, 3]);
+    const maskedModule = await load(heading + 'root xxx 3 12.0 3.0 15.0\n');
+    assert.deepEqual(maskedModule.driver.itemNames(), ['total', 'cell', 'net', 'cell-count']);
+    for (const invalid of ['hidden', 'x1', 'NaN', '-1', '1.5']) {
+        await assert.rejects(load(heading + 'root top xxx 12.0 3.0 15.0\n' +
+            `root/leaf cell ${invalid} 4.0 1.0 5.0\n`), /Invalid Cell-Count/);
+    }
+});
+
+test('area reload restores cell counts after a masked report', async () => {
+    const driver = new GenusArea();
+    await load(heading + 'root xxx 12.0 3.0 15.0\n', driver);
+    assert.equal(driver.itemNames().length, 3);
+    const { root } = await load(heading + 'root 3 12.0 3.0 15.0\n', driver);
+    assert.deepEqual(driver.itemNames(), ['total', 'cell', 'net', 'cell-count']);
+    assert.deepEqual(root.data, [15, 12, 3, 3]);
+});
+
+test('hierarchical area and power preserve reported values when child sums exceed totals', async () => {
+    const area = await load(heading + 'root top 4 8.0 2.0 10.0\n' +
+        'root/leaf cell 2 9.0 3.0 12.0\n');
+    assert.deepEqual(area.root.data, [10, 8, 2, 4]);
+    assert.deepEqual(area.root.children.leaf.data, [12, 9, 3, 2]);
+    assert.deepEqual(area.root.children.others.data, [0, 0, 0, 2]);
+    const header = 'Cells Leakage Internal Switching Total Instance\n';
+    const power = await load(header + '4 1.0 6.0 3.0 10.0 /root\n' +
+        '2 2.0 7.0 4.0 13.0 /root/leaf\n');
+    assert.deepEqual(power.root.data, [10, 9, 6, 3, 1, 4]);
+    assert.deepEqual(power.root.children.leaf.data, [13, 11, 7, 4, 2, 2]);
+    assert.deepEqual(power.root.children.others.data, [0, 0, 0, 0, 0, 2]);
+    checkMetrics(area.root, 4);
+    checkMetrics(power.root, 6);
+    await assert.rejects(load(header + '1 1.0 6.0 3.0 10.0 /root\n' +
+        '2 2.0 7.0 4.0 13.0 /root/leaf\n'), /Child totals/);
+});
+
 test('area input tolerates long preambles, CRLF, small HTTP chunks and missing final newline', async t => {
     const input = ('Report preamble\n'.repeat(160) + fixture('area_indented.rpt')).trimEnd().replace(/\n/g, '\r\n');
     const bytes = new TextEncoder().encode(input);

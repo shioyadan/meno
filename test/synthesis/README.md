@@ -76,6 +76,13 @@ power tables share a parser and support full instance paths or short names
 with a `Lvl` column. Power units are preserved. Select a single PDB frame
 before exporting, as multiple frames in one input are rejected.
 
+These hierarchical area/power tables retain reported area and power values
+even when child sums exceed parent values, for example after rounding or
+numeric transformations. Positive unaccounted values appear as `others`;
+negative remainders are not added. Cell counts must remain consistent. If any
+Genus area cell count is masked with `x` characters, the cell-count metric is
+omitted for the whole report; area metrics remain available.
+
 Joules category summaries use a separate parser and appear under a `Total`
 root, with only the metrics present in the report. Dynamic power is derived
 when internal and switching power are available.
