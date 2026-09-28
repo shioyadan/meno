@@ -53,7 +53,7 @@ latest-archive: typecheck test production
 	rm -f meno-latest.zip
 	rm -rf dist/meno-latest
 	mkdir -p dist/meno-latest
-	cp dist/index.html dist/meno.sh dist/README.md dist/LICENSE.md dist/THIRD-PARTY-LICENSES.md dist/bundle.js.LICENSE.txt dist/meno-latest/
+	cp dist/index.html dist/meno.sh dist/README.md dist/LICENSE.md dist/THIRD-PARTY-LICENSES.md dist/meno-latest/
 	cd dist; zip -qr ../meno-latest.zip meno-latest
 	rm -r dist/meno-latest
 	zip -T meno-latest.zip

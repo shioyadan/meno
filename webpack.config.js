@@ -1,6 +1,7 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const HtmlInlineScriptPlugin = require("html-inline-script-webpack-plugin");
+const TerserPlugin = require("terser-webpack-plugin");
 
 
 module.exports = (env, argv) => {
@@ -20,6 +21,13 @@ module.exports = (env, argv) => {
             clean: true, // 出力ディレクトリをクリーンアップする
             filename: "bundle.js",
             publicPath: ''
+        },
+        optimization: {
+            minimizer: [new TerserPlugin({
+                // 全文はTHIRD-PARTY-LICENSES.mdに集約し、権利表記は単体HTMLにも残す。
+                extractComments: false,
+                terserOptions: { format: { comments: "some" } },
+            })],
         },
         // import 時に解決するファイルの拡張子
         resolve: {
