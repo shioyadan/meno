@@ -20,7 +20,7 @@ production: licenses
 	sed -i 's/^build=0-source-unknown$$/build=$(BUILD_ID)/' dist/meno.sh
 	cp ./THIRD-PARTY-LICENSES.md dist/THIRD-PARTY-LICENSES.md
 	cp ./README.md dist/README.md
-	chmod 755 dist/embed.sh dist/meno.sh
+	chmod 755 dist/embed.sh dist/launch_httpd.sh dist/meno.sh
 
 serve:
 	npx webpack serve --open
